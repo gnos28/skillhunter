@@ -1,0 +1,62 @@
+name: "build & deploy to production server"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-on-production-server:
+    runs-on: ubuntu-22.04
+    container:
+      image: ubuntu:22.04
+      options: --privileged
+    steps:
+      - name: install packages
+        run: |
+          apt-get update --allow-releaseinfo-change
+          apt-get install openssh-client -y
+
+      - name: setup openSSH config
+        if: ${{ success() }}
+        run: |
+          cd ~
+          mkdir .ssh
+          cd .ssh/
+          echo "${{secrets.PROD_SSH_PEM}}" > PROD_SSH.pem
+          chmod 400 PROD_SSH.pem
+
+      - name: dot env creation
+        if: ${{ success() }}
+        run: |
+          cd ~
+          mkdir dotenv
+          cd dotenv/
+          echo '${{secrets.DOT_ENV_FRONT}}' > .env.frontend
+          ls -al
+          echo '${{secrets.DOT_ENV_BACK}}' > .env.backend
+          ls -al
+          echo '${{secrets.AUTH_JSON}}' > auth.json
+          ls -al
+
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: scp dot env files
+        if: ${{ success() }}
+        run: |
+          scp -r -p -o StrictHostKeyChecking=accept-new -i ~/.ssh/PROD_SSH.pem ubuntu@51.77.210.56 ~/dotenv ubuntu@51.77.210.56:~ || echo
+
+      - name: scp bash script
+        if: ${{ success() }}
+        run: |
+          scp -r -p -o StrictHostKeyChecking=accept-new -i ~/.ssh/PROD_SSH.pem ubuntu@51.77.210.56 .github/workflows/deployQA.sh ubuntu@51.77.210.56:~ || echo
+
+      - name: connect SSH & run deploy script
+        if: ${{ success() }}
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/PROD_SSH.pem ubuntu@51.77.210.56 /bin/bash -s << EOT
+          chmod +x ~/deployQA.sh
+          ~/deployQA.sh > ~/logs/log.deploy.$( date +"%s") 2>&1 & disown
+          exit
+          EOT
