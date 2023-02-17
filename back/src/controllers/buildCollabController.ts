@@ -65,7 +65,7 @@ type TabCache = {
   }[];
 };
 
-const tabCache: TabCache = {};
+let tabCache: TabCache = {};
 
 const getTabData = async (
   sheetId: string,
@@ -528,6 +528,9 @@ const buildCollab = async ({
   )
     throw new Error("missing id");
 
+  // clear cache
+  tabCache = {};
+  
   const today = new Date();
 
   const driveApp = getDrive();
