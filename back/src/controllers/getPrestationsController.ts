@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { importSheet } from "../utils/importSheet";
+import { importSheet } from "../utils/importSheetData";
 
 export type ControllerType = {
   [key: string]: (req: Request, res: Response) => Promise<void>;

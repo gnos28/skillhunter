@@ -23,13 +23,15 @@ app.use(express.json());
 // CRUD API routes
 const router = express.Router();
 
-import getAgenda from "./routes/getAgendaRouter";
-import storePaypal from "./routes/storePaypalRouter";
-import getPrestations from "./routes/getPrestationsRouter";
+// import getAgenda from "./routes/getAgendaRouter";
+// import storePaypal from "./routes/storePaypalRouter";
+// import getPrestations from "./routes/getPrestationsRouter";
+import buildCollab from "./routes/buildCollabRouter";
 
-router.use("/getAgenda", getAgenda);
-router.use("/getPrestations", getPrestations);
-router.use("/storePaypal", storePaypal);
+// router.use("/getAgenda", getAgenda);
+// router.use("/getPrestations", getPrestations);
+// router.use("/storePaypal", storePaypal);
+router.use("/buildCollab", buildCollab);
 
 app.use("/api", router);
 
