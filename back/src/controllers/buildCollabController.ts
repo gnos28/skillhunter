@@ -555,7 +555,7 @@ const buildCollab = async ({
 
       if (collabId) {
         try {
-          //   console.log({ collabName, collabEmail, collabId });
+          console.log({ collabName, collabEmail, collabId });
           const fileInfo = await driveApp.files.get({
             fileId: collabId,
             fields: "*",
@@ -563,7 +563,7 @@ const buildCollab = async ({
 
           const isTrashed = fileInfo.data.trashed;
 
-          //   console.log(collabName, "fileInfo", fileInfo.data.trashed);
+          console.log(collabName, "fileInfo", fileInfo.data);
 
           //   collabSheet = SpreadsheetApp.openById(collabId);
           // const isTrashed = DriveApp.getFileById(collabId).isTrashed();
@@ -610,7 +610,7 @@ const buildCollab = async ({
     }
     lineIndex++;
   }
-  
+
   //   importDatas(true)
 
   return collabData;
