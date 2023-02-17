@@ -32,8 +32,6 @@ jobs:
           cd ~
           mkdir dotenv
           cd dotenv/
-          echo '${{secrets.DOT_ENV_FRONT}}' > .env.frontend
-          ls -al
           echo '${{secrets.DOT_ENV_BACK}}' > .env.backend
           ls -al
           echo '${{secrets.AUTH_JSON}}' > auth.json

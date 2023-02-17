@@ -13,7 +13,6 @@ cd skillhunter/
 git pull -f --rebase origin main
 
 # récupérer les .env uploadés précédemment avec scp et les déplacer ici
-mv ../dotenv/.env.frontend front/.env.local
 mv ../dotenv/.env.backend back/.env
 mv ../dotenv/auth.json back/auth.json
 
