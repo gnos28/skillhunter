@@ -2,9 +2,9 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import { clearTabData, TabListItem } from "../utils/clearSheetRows";
 import { appDrive, appGmail, appSheet } from "../utils/google";
-import { updateSheetRange } from "../utils/updateSheetRange";
-import { tabData } from "../utils/tabData";
+import { sheetAPI } from "../utils/sheetAPI";
 import { ControllerType } from "../interfaces";
+import base64url from "base64url";
 
 const TAB_NAME_CONTRATS = "CONTRATS";
 const TAB_NAME_VERSEMENT = "VERSEMENTS VARIABLE";
@@ -85,6 +85,10 @@ const COL2KEEP_CLIENTS = ["NOM CLIENT", "NB WEEKS GARANTIE"];
 const TAB_PARAMETRES_COL_EMAIL = "NEW CONTRAT ALERT EMAIL LIST";
 const COL2KEEP_PARAMETRES = [TAB_PARAMETRES_COL_EMAIL];
 
+const encodeBase64 = (data: string) => {
+  return Buffer.from(data).toString("base64");
+};
+
 const mapTrimObj = (
   row: {
     [key: string]: string;
@@ -132,6 +136,7 @@ const lockContrat = async ({
     10
   );
 
+  console.log("contratLine.rowIndex", contratLine.rowIndex);
   const rowIndex = parseInt(contratLine.rowIndex, 10);
 
   const contratLineKeys = Object.keys(contratLine);
@@ -243,15 +248,15 @@ const importDatas = async ({
 }: ImportDatasProps) => {
   console.log("****** importDatas ******");
 
-  tabData.clearCache();
+  sheetAPI.clearCache();
   const driveApp = appDrive();
 
-  const collabData = await tabData.get(
+  const collabData = await sheetAPI.getTabData(
     mainSpreadsheetId,
     tabList,
     TAB_NAME_COLLAB
   );
-  const allContratData = await tabData.get(
+  const allContratData = await sheetAPI.getTabData(
     mainSpreadsheetId,
     tabList,
     TAB_NAME_CONTRATS,
@@ -260,7 +265,7 @@ const importDatas = async ({
 
   const alertList: string[] = [];
   if (emailAlert) {
-    const paramsData = await tabData.get(
+    const paramsData = await sheetAPI.getTabData(
       mainSpreadsheetId,
       tabList,
       TAB_NAME_PARAMETRES
@@ -303,9 +308,9 @@ const importDatas = async ({
 
       if (sheetFound) {
         // récupérer les infos contrats dans fichier collaborateur
-        const collabTabList = await tabData.getTabIds(collabId);
+        const collabTabList = await sheetAPI.getTabIds(collabId);
 
-        const collabContratData = await tabData.get(
+        const collabContratData = await sheetAPI.getTabData(
           collabId,
           collabTabList,
           TAB_NAME_CONTRATS
@@ -358,7 +363,7 @@ const importDatas = async ({
             if (allContratLineIndex) {
               console.log("update data line ", allContratLineIndex);
 
-              await updateSheetRange({
+              await sheetAPI.updateRange({
                 sheetId: mainSpreadsheetId,
                 tabName: TAB_NAME_CONTRATS,
                 startCoords: [parseInt(allContratLineIndex, 10), colIndex],
@@ -380,14 +385,14 @@ const importDatas = async ({
                 else emptyLineIndex = indexToCheck;
               }
 
-              await updateSheetRange({
+              await sheetAPI.updateRange({
                 sheetId: mainSpreadsheetId,
                 tabName: TAB_NAME_CONTRATS,
                 startCoords: [emptyLineIndex, 1],
                 data: [trimedArray],
               });
 
-              await updateSheetRange({
+              await sheetAPI.updateRange({
                 sheetId: mainSpreadsheetId,
                 tabName: TAB_NAME_CONTRATS,
                 startCoords: [emptyLineIndex, colIndex],
@@ -400,31 +405,34 @@ const importDatas = async ({
 
                 const dateDebutDate = new Date(dateDebut);
 
-                await gMailApp.users.messages.send({
-                  userId: "me",
-                  requestBody: {
-                    payload: {
-                      body: {
-                        data: `date début ${dateDebutDate.getDate()}/${
-                          dateDebutDate.getMonth() + 1
-                        }/${dateDebutDate.getFullYear()}<br>
-                        client ${client}<br>
-                        type ${type}<br>
-                        réalisé par ${collabName}<br>`,
-                      },
-                      headers: [
-                        {
-                          name: "To",
-                          value: alertList.join(","),
-                        },
-                        {
-                          name: "Subject",
-                          value: `*** NOUVEAU CONTRAT ${candidat.toUpperCase()} ***`,
-                        },
-                      ],
-                    },
-                  },
-                });
+                // const data =
+                //   base64url.encode(`date début ${dateDebutDate.getDate()}/${
+                //     dateDebutDate.getMonth() + 1
+                //   }/${dateDebutDate.getFullYear()}<br>
+                // client ${client}<br>
+                // type ${type}<br>
+                // réalisé par ${collabName}<br>`);
+
+                // await gMailApp.users.messages.send({
+                //   userId: "me",
+                //   requestBody: {
+                //     payload: {
+                //       body: {
+                //         data,
+                //       },
+                //       headers: [
+                //         {
+                //           name: "To",
+                //           value: alertList.join(","),
+                //         },
+                //         {
+                //           name: "Subject",
+                //           value: `*** NOUVEAU CONTRAT ${candidat.toUpperCase()} ***`,
+                //         },
+                //       ],
+                //     },
+                //   },
+                // });
               }
             }
 
@@ -463,7 +471,7 @@ const handleContratUpdate = async ({
   const sheetApp = appSheet();
 
   // onglet "CONTRATS" dans copie de la trame
-  const contratsByCollabValues = await tabData.get(
+  const contratsByCollabValues = await sheetAPI.getTabData(
     collabFileId,
     newFileTabList,
     TAB_NAME_CONTRATS
@@ -480,7 +488,7 @@ const handleContratUpdate = async ({
       );
     });
 
-  const spreadsheetsData = await sheetApp.spreadsheets.get({
+  const spreadsheetsData = await sheetAPI.getTabMetaData({
     spreadsheetId: collabFileId,
     fields: "*",
     ranges: ["A:A"],
@@ -542,7 +550,7 @@ const handleContratUpdate = async ({
 
     // effacer les précédentes données ?
 
-    updateSheetRange({
+    sheetAPI.updateRange({
       sheetId: collabFileId,
       tabName: TAB_NAME_CONTRATS,
       startCoords: [2, 1],
@@ -570,7 +578,14 @@ const buildTabData = async ({
   headerRowIndex,
   colToKeep,
 }: BuildTabDataProps) => [
-  ...(await tabData.get(mainSpreadsheetId, tabList, tabName, headerRowIndex))
+  ...(
+    await sheetAPI.getTabData(
+      mainSpreadsheetId,
+      tabList,
+      tabName,
+      headerRowIndex
+    )
+  )
     .filter((row) => (filterByCol ? row[filterByCol] === collabName : true))
     .map((row) => mapTrimObj(row, colToKeep)),
   mapTrimObj({}, colToKeep),
@@ -639,9 +654,9 @@ const updateWholeDatas = async ({
     filterByCol: TAB_COLLAB_COL_COLLAB,
   });
 
-  const newFileTabList = await tabData.getTabIds(collabFileId);
+  const newFileTabList = await sheetAPI.getTabIds(collabFileId);
 
-  //   const importData = await tabData.get(
+  //   const importData = await sheetAPI.getTabData(
   //     collabFileId,
   //     newFileTabList,
   //     TAB_IMPORT_DATA,
@@ -672,10 +687,10 @@ const updateWholeDatas = async ({
   await clearTabData(collabFileId, newFileTabList, TAB_IMPORT_DATA, 2);
 
   // udpate data in IMPORT_DATAS sheet
-  updateSheetRange({
+  sheetAPI.updateRange({
     sheetId: collabFileId,
     tabName: TAB_IMPORT_DATA,
-    startCoords: [1, 3],
+    startCoords: [3, 1],
     data: values,
   });
 
@@ -734,7 +749,7 @@ const createNewSheet = async ({
       forceContratUpdate: true,
     });
 
-    const paramsData = await tabData.get(
+    const paramsData = await sheetAPI.getTabData(
       mainSpreadsheetId,
       tabList,
       TAB_NAME_PARAMETRES
@@ -782,13 +797,13 @@ const buildCollab = async ({
     throw new Error("missing id");
 
   // clear cache
-  tabData.clearCache();
+  sheetAPI.clearCache();
 
   const driveApp = appDrive();
 
-  const tabList = await tabData.getTabIds(mainSpreadsheetId);
+  const tabList = await sheetAPI.getTabIds(mainSpreadsheetId);
 
-  const collabData = await tabData.get(
+  const collabData = await sheetAPI.getTabData(
     mainSpreadsheetId,
     tabList,
     TAB_NAME_COLLAB
@@ -842,7 +857,7 @@ const buildCollab = async ({
         });
         console.log("collabId", collabId);
 
-        updateSheetRange({
+        sheetAPI.updateRange({
           sheetId: mainSpreadsheetId,
           tabName: TAB_NAME_COLLAB,
           startCoords: [lineIndex, 4],
