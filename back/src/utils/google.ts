@@ -1,16 +1,18 @@
 import { google } from "googleapis";
 
-const getAuth = () =>
+const getAuth = (scopes: string[]) =>
   new google.auth.GoogleAuth({
     keyFile: "./auth.json",
-    scopes: [
-      "https://www.googleapis.com/auth/calendar",
-      "https://www.googleapis.com/auth/calendar.events",
-    ],
+    scopes,
   });
 
-export const getAgenda = () => {
-  const auth = getAuth();
+export const appCalendar = () => {
+  const scopes = [
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/calendar.events",
+  ];
+
+  const auth = getAuth(scopes);
 
   const agenda = google.calendar({
     version: "v3",
@@ -18,4 +20,28 @@ export const getAgenda = () => {
   });
 
   return agenda;
+};
+
+export const appDrive = () => {
+  const scopes = ["https://www.googleapis.com/auth/drive"];
+  const auth = getAuth(scopes);
+
+  const drive = google.drive({
+    version: "v3",
+    auth,
+  });
+
+  return drive;
+};
+
+export const appSheet = () => {
+  const scopes = ["https://www.googleapis.com/auth/spreadsheets"];
+  const auth = getAuth(scopes);
+
+  const sheets = google.sheets({
+    version: "v4",
+    auth,
+  });
+
+  return sheets;
 };

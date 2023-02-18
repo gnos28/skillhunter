@@ -1,7 +1,11 @@
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import * as dotenv from "dotenv";
-
 dotenv.config();
+
+export type TabListItem = {
+  sheetId: string;
+  sheetName: string;
+};
 
 export const clearSheetRows = async (
   sheetId: string,
@@ -30,4 +34,16 @@ export const clearSheetRows = async (
 
     await sheet.clearRows();
   }
+};
+
+export const clearTabData = async (
+  sheetId: string,
+  tabList: TabListItem[],
+  tabName: string,
+  headerRowIndex?: number
+) => {
+  const tabId = tabList.filter((tab) => tab.sheetName === tabName)[0]?.sheetId;
+  if (tabId === undefined) throw new Error(`tab ${tabName} not found`);
+
+  return await clearSheetRows(sheetId, tabId, headerRowIndex);
 };

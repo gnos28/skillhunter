@@ -1,51 +1,11 @@
-import { Request, Response } from "express";
-import { calendar_v3, google } from "googleapis";
-import fs from "fs";
-
 import * as dotenv from "dotenv";
-import { importSheetData } from "../utils/importSheetData";
-import { getSheetTabIds } from "../utils/getSheetTabIds";
-import AlphanumericEncoder from "alphanumeric-encoder";
-import { clearSheetRows } from "../utils/clearSheetRows";
 dotenv.config();
-
-export type ControllerType = {
-  [key: string]: (req: Request, res: Response) => Promise<void>;
-};
-
-type BuildCollabProps = {
-  mainSpreadsheetId: string | undefined;
-  folderId: string | undefined;
-  trameId: string | undefined;
-};
-
-const getAuth = () =>
-  new google.auth.GoogleAuth({
-    keyFile: "./auth.json",
-    scopes: ["https://www.googleapis.com/auth/drive"],
-  });
-
-const getDrive = () => {
-  const auth = getAuth();
-
-  const drive = google.drive({
-    version: "v3",
-    auth,
-  });
-
-  return drive;
-};
-
-const getSheet = () => {
-  const auth = getAuth();
-
-  const sheets = google.sheets({
-    version: "v4",
-    auth,
-  });
-
-  return sheets;
-};
+import { getSheetTabIds } from "../utils/getSheetTabIds";
+import { clearTabData, TabListItem } from "../utils/clearSheetRows";
+import { appDrive, appSheet } from "../utils/google";
+import { updateSheetRange } from "../utils/updateSheetRange";
+import { tabData } from "../utils/tabData";
+import { ControllerType } from "../interfaces";
 
 const TAB_NAME_CONTRATS = "CONTRATS";
 const TAB_NAME_VERSEMENT = "VERSEMENTS VARIABLE";
@@ -54,59 +14,12 @@ const TAB_NAME_VARIABLE = "VARIABLE / COLLABORATEURS";
 const TAB_NAME_COLLAB = "COLLABORATEURS";
 const TAB_IMPORT_DATA = "IMPORT_DATAS";
 
-type TabListItem = {
-  sheetId: string;
-  sheetName: string;
-};
+const TAB_CONTRATS_COL_ID = "ID CONTRAT";
+const TAB_CONTRATS_COL_COLLAB = "RÉALISÉ PAR";
 
-type TabCache = {
-  [key: string]: {
-    [key: string]: string;
-  }[];
-};
-
-let tabCache: TabCache = {};
-
-const getTabData = async (
-  sheetId: string,
-  tabList: TabListItem[],
-  tabName: string,
-  headerRowIndex?: number
-) => {
-  const tabId = tabList.filter((tab) => tab.sheetName === tabName)[0]?.sheetId;
-  if (tabId === undefined) throw new Error(`tab ${tabName} not found`);
-
-  const cacheKey = sheetId + ":" + tabId;
-
-  if (tabCache[cacheKey] === undefined)
-    tabCache[cacheKey] = await importSheetData(sheetId, tabId, headerRowIndex);
-
-  return tabCache[cacheKey];
-};
-
-const clearTabData = async (
-  sheetId: string,
-  tabList: TabListItem[],
-  tabName: string,
-  headerRowIndex?: number
-) => {
-  const tabId = tabList.filter((tab) => tab.sheetName === tabName)[0]?.sheetId;
-  if (tabId === undefined) throw new Error(`tab ${tabName} not found`);
-
-  return await clearSheetRows(sheetId, tabId, headerRowIndex);
-};
-
-type UpdateWholeDatasProps = {
-  tabList: TabListItem[];
-  collabName: string;
-  collabFileId: string;
-  mainSpreadsheetId: string;
-  forceContratUpdate?: boolean;
-};
-
-const contratColsToKeep = [
-  "ID CONTRAT",
-  "RÉALISÉ PAR",
+const COL2KEEP_CONTRATS = [
+  TAB_CONTRATS_COL_ID,
+  TAB_CONTRATS_COL_COLLAB,
   "DATE DEBUT",
   "NB SEMAINES GARANTIE",
   "(RUPTURE GARANTIE)",
@@ -119,16 +32,20 @@ const contratColsToKeep = [
   "% CONTRAT",
 ];
 
-const versementColsToKeep = [
-  "NOM PRENOM COLLABORATEUR",
+const TAB_VERSEMENT_COL_COLLAB = "NOM PRENOM COLLABORATEUR";
+
+const COL2KEEP_VERSEMENT = [
+  TAB_VERSEMENT_COL_COLLAB,
   "DATE",
   "MONTANT VERSE",
   "AJOUT CONTRAT",
   "ALL CONTRATS",
 ];
 
-const variableColsToKeep = [
-  "NOM PRENOM",
+const TAB_VARIABLE_COL_COLLAB = "NOM PRENOM";
+
+const COL2KEEP_VARIABLE = [
+  TAB_VARIABLE_COL_COLLAB,
   "DEBUT",
   "FIN",
   "FREQ VARIABLE",
@@ -142,9 +59,11 @@ const variableColsToKeep = [
   "T4 %",
 ];
 
-const collabColsToKeep = ["NOM PRENOM", "CONTRAT", "EMAIL"];
+const TAB_COLLAB_COL_COLLAB = "NOM PRENOM";
 
-const clientColsToKeep = ["NOM CLIENT", "NB WEEKS GARANTIE"];
+const COL2KEEP_COLLAB = [TAB_COLLAB_COL_COLLAB, "CONTRAT", "EMAIL"];
+
+const COL2KEEP_CLIENTS = ["NOM CLIENT", "NB WEEKS GARANTIE"];
 
 const mapTrimObj = (
   row: {
@@ -178,52 +97,16 @@ type HandleContratUpdateProps = {
   collabName: string;
 };
 
-type UpdateSheetRange = {
-  sheetId: string;
-  tabName: string;
-  startCoords: [number, number];
-  data: any[][];
-};
-
-const updateSheetRange = async ({
-  sheetId,
-  tabName,
-  startCoords,
-  data,
-}: UpdateSheetRange) => {
-  const sheetApp = getSheet();
-
-  const encoder = new AlphanumericEncoder();
-
-  const encodedStartCol = encoder.encode(startCoords[1] || 1);
-  const encodedEndCol = encoder.encode(
-    (startCoords[1] || 1) - 1 + data[0].length
-  );
-
-  const rangeA1notation = `'${tabName}'!${encodedStartCol}${
-    startCoords[0] || 1
-  }:${encodedEndCol}${data.length + (startCoords[0] || 1) - 1}`;
-
-  await sheetApp.spreadsheets.values.update({
-    spreadsheetId: sheetId,
-    range: rangeA1notation,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: data,
-    },
-  });
-};
-
 const handleContratUpdate = async ({
   collabFileId,
   newFileTabList,
   contratData,
   collabName,
 }: HandleContratUpdateProps) => {
-  const sheetApp = getSheet();
+  const sheetApp = appSheet();
 
   // onglet "CONTRATS" dans copie de la trame
-  const contratsByCollabValues = await getTabData(
+  const contratsByCollabValues = await tabData.get(
     collabFileId,
     newFileTabList,
     TAB_NAME_CONTRATS
@@ -259,12 +142,12 @@ const handleContratUpdate = async ({
         (_, rowIndex) => values[rowIndex] || Array(values[0].length).fill("")
       );
 
-    const contratsCollabIndex = contratColsToKeep.findIndex(
-      (val) => val === "RÉALISÉ PAR"
+    const contratsCollabIndex = COL2KEEP_CONTRATS.findIndex(
+      (val) => val === TAB_CONTRATS_COL_COLLAB
     );
 
-    const contratsIdIndex = contratColsToKeep.findIndex(
-      (val) => val === "ID CONTRAT"
+    const contratsIdIndex = COL2KEEP_CONTRATS.findIndex(
+      (val) => val === TAB_CONTRATS_COL_ID
     );
 
     // pré-remplir colonne "réalisé par"
@@ -276,7 +159,7 @@ const handleContratUpdate = async ({
     // générer les IDs de contrat
     const idList: string[] = [];
     contratsByCollabValues.forEach((line) => {
-      if (line["ID CONTRAT"]) idList.push(line[contratsIdIndex]);
+      if (line[TAB_CONTRATS_COL_ID]) idList.push(line[contratsIdIndex]);
     });
 
     console.log("idList", idList);
@@ -299,22 +182,14 @@ const handleContratUpdate = async ({
 
     // contratsByCollabRange.setValues(contratsByCollabValues);
     // contratsByCollabRange.setDataValidations(dataValidationRules); // remettre data validation
-    const encoder = new AlphanumericEncoder();
-    const encodedCol = encoder.encode(fullValues[0].length);
-
-    const rangeA1notation = `'${TAB_NAME_CONTRATS}'!A2:${encodedCol}${
-      fullValues.length + 1
-    }`;
 
     // effacer les précédentes données ?
 
-    await sheetApp.spreadsheets.values.update({
-      spreadsheetId: collabFileId,
-      range: rangeA1notation,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: fullValues,
-      },
+    updateSheetRange({
+      sheetId: collabFileId,
+      tabName: TAB_NAME_CONTRATS,
+      startCoords: [1, 2],
+      data: fullValues,
     });
   }
 };
@@ -338,11 +213,19 @@ const buildTabData = async ({
   headerRowIndex,
   colToKeep,
 }: BuildTabDataProps) => [
-  ...(await getTabData(mainSpreadsheetId, tabList, tabName, headerRowIndex))
+  ...(await tabData.get(mainSpreadsheetId, tabList, tabName, headerRowIndex))
     .filter((row) => (filterByCol ? row[filterByCol] === collabName : true))
     .map((row) => mapTrimObj(row, colToKeep)),
   mapTrimObj({}, colToKeep),
 ];
+
+type UpdateWholeDatasProps = {
+  tabList: TabListItem[];
+  collabName: string;
+  collabFileId: string;
+  mainSpreadsheetId: string;
+  forceContratUpdate?: boolean;
+};
 
 const updateWholeDatas = async ({
   tabList,
@@ -357,9 +240,9 @@ const updateWholeDatas = async ({
     mainSpreadsheetId,
     tabList,
     collabName,
-    colToKeep: contratColsToKeep,
+    colToKeep: COL2KEEP_CONTRATS,
     tabName: TAB_NAME_CONTRATS,
-    filterByCol: "RÉALISÉ PAR",
+    filterByCol: TAB_CONTRATS_COL_COLLAB,
     headerRowIndex: 2,
   });
 
@@ -367,16 +250,16 @@ const updateWholeDatas = async ({
     mainSpreadsheetId,
     tabList,
     collabName,
-    colToKeep: versementColsToKeep,
+    colToKeep: COL2KEEP_VERSEMENT,
     tabName: TAB_NAME_VERSEMENT,
-    filterByCol: "NOM PRENOM COLLABORATEUR",
+    filterByCol: TAB_VERSEMENT_COL_COLLAB,
   });
 
   const clientsData = await buildTabData({
     mainSpreadsheetId,
     tabList,
     collabName,
-    colToKeep: clientColsToKeep,
+    colToKeep: COL2KEEP_CLIENTS,
     tabName: TAB_NAME_CLIENTS,
   });
 
@@ -384,9 +267,9 @@ const updateWholeDatas = async ({
     mainSpreadsheetId,
     tabList,
     collabName,
-    colToKeep: variableColsToKeep,
+    colToKeep: COL2KEEP_VARIABLE,
     tabName: TAB_NAME_VARIABLE,
-    filterByCol: "NOM PRENOM",
+    filterByCol: TAB_VARIABLE_COL_COLLAB,
     headerRowIndex: 2,
   });
 
@@ -394,14 +277,14 @@ const updateWholeDatas = async ({
     mainSpreadsheetId,
     tabList,
     collabName,
-    colToKeep: collabColsToKeep,
+    colToKeep: COL2KEEP_COLLAB,
     tabName: TAB_NAME_COLLAB,
-    filterByCol: "NOM PRENOM",
+    filterByCol: TAB_COLLAB_COL_COLLAB,
   });
 
   const newFileTabList = await getSheetTabIds(collabFileId);
 
-  //   const importData = await getTabData(
+  //   const importData = await tabData.get(
   //     collabFileId,
   //     newFileTabList,
   //     TAB_IMPORT_DATA,
@@ -432,22 +315,11 @@ const updateWholeDatas = async ({
   await clearTabData(collabFileId, newFileTabList, TAB_IMPORT_DATA, 2);
 
   // udpate data in IMPORT_DATAS sheet
-  const sheetApp = getSheet();
-
-  const encoder = new AlphanumericEncoder();
-  const encodedCol = encoder.encode(values[0].length);
-
-  const rangeA1notation = `'${TAB_IMPORT_DATA}'!A3:${encodedCol}${
-    values.length + 2
-  }`;
-
-  await sheetApp.spreadsheets.values.update({
-    spreadsheetId: collabFileId,
-    range: rangeA1notation,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values,
-    },
+  updateSheetRange({
+    sheetId: collabFileId,
+    tabName: TAB_IMPORT_DATA,
+    startCoords: [1, 3],
+    data: values,
   });
 
   if (forceContratUpdate) {
@@ -479,12 +351,11 @@ const createNewSheet = async ({
 }: CreateNewSheetProps) => {
   console.log("createNewSheet", collabName);
 
-  const driveApp = getDrive();
+  const driveApp = appDrive();
 
   // créer copie trame
   const trameCopy = await driveApp.files.copy({
     fileId: trameId,
-
     fields: "*",
     requestBody: {},
   });
@@ -516,6 +387,12 @@ const createNewSheet = async ({
   return fileId || "";
 };
 
+type BuildCollabProps = {
+  mainSpreadsheetId: string | undefined;
+  folderId: string | undefined;
+  trameId: string | undefined;
+};
+
 const buildCollab = async ({
   mainSpreadsheetId,
   folderId,
@@ -529,15 +406,15 @@ const buildCollab = async ({
     throw new Error("missing id");
 
   // clear cache
-  tabCache = {};
-  
+  tabData.clearCache();
+
   const today = new Date();
 
-  const driveApp = getDrive();
+  const driveApp = appDrive();
 
   const tabList = await getSheetTabIds(mainSpreadsheetId);
 
-  const collabData = await getTabData(
+  const collabData = await tabData.get(
     mainSpreadsheetId,
     tabList,
     TAB_NAME_COLLAB
@@ -558,7 +435,7 @@ const buildCollab = async ({
 
       if (collabId) {
         try {
-          console.log({ collabName, collabEmail, collabId });
+          // console.log({ collabName, collabEmail, collabId });
           const fileInfo = await driveApp.files.get({
             fileId: collabId,
             fields: "*",
@@ -566,7 +443,7 @@ const buildCollab = async ({
 
           const isTrashed = fileInfo.data.trashed;
 
-          console.log(collabName, "fileInfo", fileInfo.data);
+          // console.log(collabName, "fileInfo", fileInfo.data);
 
           //   collabSheet = SpreadsheetApp.openById(collabId);
           // const isTrashed = DriveApp.getFileById(collabId).isTrashed();
