@@ -13,6 +13,7 @@ export const importSheetData = async (
   tabId: string | undefined,
   headerRowIndex?: number
 ) => {
+  console.log("*** importSheetData 👎");
   const { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY } = process.env;
 
   // let rawdatas = fs.readFileSync("jobseasons-oauth.json", "utf8");

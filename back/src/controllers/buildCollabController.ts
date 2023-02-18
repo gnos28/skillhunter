@@ -1,6 +1,5 @@
 import * as dotenv from "dotenv";
 dotenv.config();
-import { getSheetTabIds } from "../utils/getSheetTabIds";
 import { clearTabData, TabListItem } from "../utils/clearSheetRows";
 import { appDrive, appGmail, appSheet } from "../utils/google";
 import { updateSheetRange } from "../utils/updateSheetRange";
@@ -242,6 +241,8 @@ const importDatas = async ({
   mainSpreadsheetId,
   tabList,
 }: ImportDatasProps) => {
+  console.log("****** importDatas ******");
+
   tabData.clearCache();
   const driveApp = appDrive();
 
@@ -302,7 +303,7 @@ const importDatas = async ({
 
       if (sheetFound) {
         // récupérer les infos contrats dans fichier collaborateur
-        const collabTabList = await getSheetTabIds(collabId);
+        const collabTabList = await tabData.getTabIds(collabId);
 
         const collabContratData = await tabData.get(
           collabId,
@@ -310,7 +311,8 @@ const importDatas = async ({
           TAB_NAME_CONTRATS
         );
 
-        collabContratData.forEach(async (line, lineIndex) => {
+        for await (const line of collabContratData) {
+          // collabContratData.forEach(async (line, lineIndex) => {
           const id = line[TAB_CONTRATS_COL_ID];
           const dateDebut = line[TAB_CONTRATS_COL_DATE_DEBUT];
           const nbGarantyWeeks = line[TAB_CONTRATS_COL_NB_SEMAINE_GARANTIE];
@@ -353,7 +355,7 @@ const importDatas = async ({
             const trimedArray = Object.values(trimedLine);
 
             // si trouvé > mettre à jour les datas dans chapeau
-            if (allContratLineIndex !== "") {
+            if (allContratLineIndex) {
               console.log("update data line ", allContratLineIndex);
 
               await updateSheetRange({
@@ -398,7 +400,8 @@ const importDatas = async ({
 
                 const dateDebutDate = new Date(dateDebut);
 
-                gMailApp.users.messages.send({
+                await gMailApp.users.messages.send({
+                  userId: "me",
                   requestBody: {
                     payload: {
                       body: {
@@ -425,17 +428,18 @@ const importDatas = async ({
               }
             }
 
-            lockContrat({
+            await lockContrat({
               collabSheetId: collabId,
               users: alertList,
               collabTabList,
               contratLine: line,
             });
           }
-        });
+        }
       }
     }
   }
+  console.log("****** END OF importDatas FUNCTION ******");
 };
 
 type HandleContratUpdateProps = {
@@ -541,7 +545,7 @@ const handleContratUpdate = async ({
     updateSheetRange({
       sheetId: collabFileId,
       tabName: TAB_NAME_CONTRATS,
-      startCoords: [1, 2],
+      startCoords: [2, 1],
       data: fullValues,
     });
   }
@@ -635,7 +639,7 @@ const updateWholeDatas = async ({
     filterByCol: TAB_COLLAB_COL_COLLAB,
   });
 
-  const newFileTabList = await getSheetTabIds(collabFileId);
+  const newFileTabList = await tabData.getTabIds(collabFileId);
 
   //   const importData = await tabData.get(
   //     collabFileId,
@@ -740,6 +744,7 @@ const createNewSheet = async ({
     await driveApp.permissions.create({
       fileId,
       requestBody: { role: "writer", type: "user", emailAddress: collabEmail },
+      sendNotificationEmail: false,
     });
 
     for await (const params of paramsData) {
@@ -750,6 +755,7 @@ const createNewSheet = async ({
           type: "user",
           emailAddress: params[TAB_PARAMETRES_COL_EMAIL],
         },
+        sendNotificationEmail: false,
       });
     }
   }
@@ -780,7 +786,7 @@ const buildCollab = async ({
 
   const driveApp = appDrive();
 
-  const tabList = await getSheetTabIds(mainSpreadsheetId);
+  const tabList = await tabData.getTabIds(mainSpreadsheetId);
 
   const collabData = await tabData.get(
     mainSpreadsheetId,
@@ -859,7 +865,9 @@ const buildCollab = async ({
     lineIndex++;
   }
 
-  importDatas({ emailAlert: true, mainSpreadsheetId, tabList });
+  await importDatas({ emailAlert: true, mainSpreadsheetId, tabList });
+
+  console.log("****** END OF buildCollab FUNCTION ******");
 
   return collabData;
 };

@@ -4,8 +4,8 @@ import AlphanumericEncoder from "alphanumeric-encoder";
 
 dotenv.config();
 
-export const getSheetTabIds = async (sheetId: string | undefined) => {
-  console.log("getSheetTabIds" + sheetId);
+export const getSheetTabIds = async (sheetId: string) => {
+  console.log("*** getSheetTabIds 👎");
 
   const { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY } = process.env;
 
