@@ -1,3 +1,5 @@
+import { sheets_v4 } from "googleapis";
+import { GaxiosResponse } from "googleapis-common";
 import { TabListItem } from "./clearSheetRows";
 import { getSheetTabIds } from "./getSheetTabIds";
 import { appSheet } from "./google";
@@ -34,8 +36,76 @@ let tabCache: TabCache = {};
 let tabIdsCache: TabIdsCache = {};
 let lastReadRequestTime: number | undefined = undefined;
 let lastWriteRequestTime: number | undefined = undefined;
+let nbInQueueRead = 0;
+let nbInQueueWrite = 0;
 
 const DELAY = 2000; // in ms
+
+const handleReadDelay = async <T>(callback: () => Promise<T>) => {
+  const currentTime = new Date().getTime();
+  nbInQueueRead++;
+
+  if (
+    lastReadRequestTime &&
+    currentTime < lastReadRequestTime + DELAY * nbInQueueRead
+  ) {
+    console.log(
+      "*** force DELAY",
+      nbInQueueRead,
+      lastReadRequestTime
+        ? lastReadRequestTime + DELAY * nbInQueueRead - currentTime
+        : 0
+    );
+    await new Promise((resolve) =>
+      setTimeout(
+        () => resolve(null),
+        lastReadRequestTime
+          ? lastReadRequestTime + DELAY * nbInQueueRead - currentTime
+          : 0
+      )
+    );
+  }
+
+  const res = await callback();
+
+  lastReadRequestTime = new Date().getTime();
+  nbInQueueRead--;
+
+  return res;
+};
+
+const handleWriteDelay = async <T>(callback: () => Promise<T>) => {
+  const currentTime = new Date().getTime();
+  nbInQueueWrite++;
+
+  if (
+    lastWriteRequestTime &&
+    currentTime < lastWriteRequestTime + DELAY * nbInQueueWrite
+  ) {
+    console.log(
+      "*** force DELAY",
+      nbInQueueWrite,
+      lastWriteRequestTime
+        ? lastWriteRequestTime + DELAY * nbInQueueWrite - currentTime
+        : 0
+    );
+    await new Promise((resolve) =>
+      setTimeout(
+        () => resolve(null),
+        lastWriteRequestTime
+          ? lastWriteRequestTime + DELAY * nbInQueueWrite - currentTime
+          : 0
+      )
+    );
+  }
+
+  const res = await callback();
+
+  lastWriteRequestTime = new Date().getTime();
+  nbInQueueWrite--;
+
+  return res;
+};
 
 export const sheetAPI = {
   getTabIds: async (sheetId: string | undefined) => {
@@ -43,25 +113,9 @@ export const sheetAPI = {
     if (sheetId) {
       const cacheKey = sheetId;
       if (tabIdsCache[cacheKey] === undefined) {
-        const currentTime = new Date().getTime();
-
-        if (lastReadRequestTime && currentTime < lastReadRequestTime + DELAY) {
-          console.log(
-            "*** force DELAY",
-            lastReadRequestTime ? lastReadRequestTime + DELAY - currentTime : 0
-          );
-          await new Promise((resolve) =>
-            setTimeout(
-              () => resolve(null),
-              lastReadRequestTime
-                ? lastReadRequestTime + DELAY - currentTime
-                : 0
-            )
-          );
-        }
-
-        tabIdsCache[cacheKey] = await getSheetTabIds(sheetId);
-        lastReadRequestTime = new Date().getTime();
+        await handleReadDelay(async () => {
+          tabIdsCache[cacheKey] = await getSheetTabIds(sheetId);
+        });
       } else console.log("*** using cache 👍");
 
       return tabIdsCache[cacheKey];
@@ -84,28 +138,13 @@ export const sheetAPI = {
     const cacheKey = sheetId + ":" + tabId;
 
     if (tabCache[cacheKey] === undefined) {
-      const currentTime = new Date().getTime();
-
-      if (lastReadRequestTime && currentTime < lastReadRequestTime + DELAY) {
-        console.log(
-          "*** force DELAY",
-          lastReadRequestTime ? lastReadRequestTime + DELAY - currentTime : 0
+      await handleReadDelay(async () => {
+        tabCache[cacheKey] = await importSheetData(
+          sheetId,
+          tabId,
+          headerRowIndex
         );
-        await new Promise((resolve) =>
-          setTimeout(
-            () => resolve(null),
-            lastReadRequestTime ? lastReadRequestTime + DELAY - currentTime : 0
-          )
-        );
-      }
-
-      tabCache[cacheKey] = await importSheetData(
-        sheetId,
-        tabId,
-        headerRowIndex
-      );
-
-      lastReadRequestTime = new Date().getTime();
+      });
     } else console.log("*** using cache 👍");
 
     return tabCache[cacheKey];
@@ -117,31 +156,17 @@ export const sheetAPI = {
     ranges,
   }: GetTabMetaDataProps) => {
     console.log("*** sheetAPI.getTabMetaData");
+    nbInQueueRead++;
 
-    const sheetApp = appSheet();
+    const metaData = await handleReadDelay(async () => {
+      const sheetApp = appSheet();
 
-    const currentTime = new Date().getTime();
-
-    if (lastReadRequestTime && currentTime < lastReadRequestTime + DELAY) {
-      console.log(
-        "*** force DELAY",
-        lastReadRequestTime ? lastReadRequestTime + DELAY - currentTime : 0
-      );
-      await new Promise((resolve) =>
-        setTimeout(
-          () => resolve(null),
-          lastReadRequestTime ? lastReadRequestTime + DELAY - currentTime : 0
-        )
-      );
-    }
-
-    const metaData = await sheetApp.spreadsheets.get({
-      spreadsheetId,
-      fields,
-      ranges,
+      return await sheetApp.spreadsheets.get({
+        spreadsheetId,
+        fields,
+        ranges,
+      });
     });
-
-    lastReadRequestTime = new Date().getTime();
 
     return metaData;
   },
@@ -149,6 +174,7 @@ export const sheetAPI = {
   clearCache: () => {
     // clear cache
     tabCache = {};
+    tabIdsCache = {};
   },
 
   updateRange: async ({
@@ -159,28 +185,37 @@ export const sheetAPI = {
   }: UpdateSheetRangeProps) => {
     console.log("*** sheetAPI.updateRange");
 
-    const currentTime = new Date().getTime();
-
-    if (lastWriteRequestTime && currentTime < lastWriteRequestTime + DELAY) {
-      console.log(
-        "*** force DELAY",
-        lastWriteRequestTime ? lastWriteRequestTime + DELAY - currentTime : 0
-      );
-      await new Promise((resolve) =>
-        setTimeout(
-          () => resolve(null),
-          lastWriteRequestTime ? lastWriteRequestTime + DELAY - currentTime : 0
-        )
-      );
-    }
-
-    await updateSheetRange({
-      sheetId,
-      tabName,
-      startCoords,
-      data,
+    await handleWriteDelay(async () => {
+      await updateSheetRange({
+        sheetId,
+        tabName,
+        startCoords,
+        data,
+      });
     });
 
-    lastWriteRequestTime = new Date().getTime();
+    // const currentTime = new Date().getTime();
+
+    // if (lastWriteRequestTime && currentTime < lastWriteRequestTime + DELAY) {
+    //   console.log(
+    //     "*** force DELAY",
+    //     lastWriteRequestTime ? lastWriteRequestTime + DELAY - currentTime : 0
+    //   );
+    //   await new Promise((resolve) =>
+    //     setTimeout(
+    //       () => resolve(null),
+    //       lastWriteRequestTime ? lastWriteRequestTime + DELAY - currentTime : 0
+    //     )
+    //   );
+    // }
+
+    // await updateSheetRange({
+    //   sheetId,
+    //   tabName,
+    //   startCoords,
+    //   data,
+    // });
+
+    // lastWriteRequestTime = new Date().getTime();
   },
 };
