@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import { getSheetTabIds } from "../utils/getSheetTabIds";
 import { clearTabData, TabListItem } from "../utils/clearSheetRows";
-import { appDrive, appSheet } from "../utils/google";
+import { appDrive, appGmail, appSheet } from "../utils/google";
 import { updateSheetRange } from "../utils/updateSheetRange";
 import { tabData } from "../utils/tabData";
 import { ControllerType } from "../interfaces";
@@ -12,24 +12,36 @@ const TAB_NAME_VERSEMENT = "VERSEMENTS VARIABLE";
 const TAB_NAME_CLIENTS = "CLIENTS";
 const TAB_NAME_VARIABLE = "VARIABLE / COLLABORATEURS";
 const TAB_NAME_COLLAB = "COLLABORATEURS";
+const TAB_NAME_PARAMETRES = "PARAMETRES";
 const TAB_IMPORT_DATA = "IMPORT_DATAS";
 
 const TAB_CONTRATS_COL_ID = "ID CONTRAT";
 const TAB_CONTRATS_COL_COLLAB = "RÉALISÉ PAR";
+const TAB_CONTRATS_COL_DATE_DEBUT = "DATE DEBUT";
+const TAB_CONTRATS_COL_NB_SEMAINE_GARANTIE = "NB SEMAINES GARANTIE";
+const TAB_CONTRATS_COL_RUPTURE = "(RUPTURE GARANTIE)";
+const TAB_CONTRATS_COL_CLIENT = "CLIENT";
+const TAB_CONTRATS_COL_TYPE = "TYPE CONTRAT";
+const TAB_CONTRATS_COL_CANDIDAT = "CANDIDAT";
+const TAB_CONTRATS_COL_DESCRIPTION = "DESCRIPTION";
+const TAB_CONTRATS_COL_SALAIRE = "SALAIRE CANDIDAT";
+const TAB_CONTRATS_COL_PERCENT = "% CONTRAT";
+const TAB_CONTRATS_COL_IMPORT_ID = "IMPORT_ID CONTRAT";
+const TAB_CONTRATS_COL_DATE_FIN_GARANTIE = "DATE FIN GARANTIE";
 
 const COL2KEEP_CONTRATS = [
   TAB_CONTRATS_COL_ID,
   TAB_CONTRATS_COL_COLLAB,
-  "DATE DEBUT",
-  "NB SEMAINES GARANTIE",
-  "(RUPTURE GARANTIE)",
+  TAB_CONTRATS_COL_DATE_DEBUT,
+  TAB_CONTRATS_COL_NB_SEMAINE_GARANTIE,
+  TAB_CONTRATS_COL_RUPTURE,
   "DATE PAIEMENT CLIENT",
-  "CLIENT",
-  "TYPE CONTRAT",
-  "CANDIDAT",
-  "DESCRIPTION",
-  "SALAIRE CANDIDAT",
-  "% CONTRAT",
+  TAB_CONTRATS_COL_CLIENT,
+  TAB_CONTRATS_COL_TYPE,
+  TAB_CONTRATS_COL_CANDIDAT,
+  TAB_CONTRATS_COL_DESCRIPTION,
+  TAB_CONTRATS_COL_SALAIRE,
+  TAB_CONTRATS_COL_PERCENT,
 ];
 
 const TAB_VERSEMENT_COL_COLLAB = "NOM PRENOM COLLABORATEUR";
@@ -60,10 +72,19 @@ const COL2KEEP_VARIABLE = [
 ];
 
 const TAB_COLLAB_COL_COLLAB = "NOM PRENOM";
+const TAB_COLLAB_COL_EMAIL = "EMAIL";
+const TAB_COLLAB_COL_SHEET_ID = "SHEET ID";
 
-const COL2KEEP_COLLAB = [TAB_COLLAB_COL_COLLAB, "CONTRAT", "EMAIL"];
+const COL2KEEP_COLLAB = [
+  TAB_COLLAB_COL_COLLAB,
+  "CONTRAT",
+  TAB_COLLAB_COL_EMAIL,
+];
 
 const COL2KEEP_CLIENTS = ["NOM CLIENT", "NB WEEKS GARANTIE"];
+
+const TAB_PARAMETRES_COL_EMAIL = "NEW CONTRAT ALERT EMAIL LIST";
+const COL2KEEP_PARAMETRES = [TAB_PARAMETRES_COL_EMAIL];
 
 const mapTrimObj = (
   row: {
@@ -83,6 +104,338 @@ const mapTrimObj = (
   );
 
   return filteredRow;
+};
+
+type LockContratProps = {
+  collabSheetId: string;
+  users: string[];
+  collabTabList: {
+    sheetId: string;
+    sheetName: string;
+  }[];
+  contratLine: {
+    [key: string]: string;
+  };
+};
+
+const lockContrat = async ({
+  collabSheetId,
+  users,
+  collabTabList,
+  contratLine,
+}: LockContratProps) => {
+  const sheetApp = appSheet();
+  const today = new Date();
+
+  const sheetId = parseInt(
+    collabTabList.filter((tab) => tab.sheetName === TAB_NAME_CONTRATS)[0]
+      .sheetId,
+    10
+  );
+
+  const rowIndex = parseInt(contratLine.rowIndex, 10);
+
+  const contratLineKeys = Object.keys(contratLine);
+
+  const dateDebutIndex = contratLineKeys.findIndex(
+    (key) => key === TAB_CONTRATS_COL_DATE_DEBUT
+  );
+  const garantieIndex = contratLineKeys.findIndex(
+    (key) => key === TAB_CONTRATS_COL_NB_SEMAINE_GARANTIE
+  );
+  const clientIndex = contratLineKeys.findIndex(
+    (key) => key === TAB_CONTRATS_COL_CLIENT
+  );
+  const percentIndex = contratLineKeys.findIndex(
+    (key) => key === TAB_CONTRATS_COL_PERCENT
+  );
+
+  await sheetApp.spreadsheets.batchUpdate({
+    spreadsheetId: collabSheetId,
+    requestBody: {
+      requests: [
+        {
+          addProtectedRange: {
+            protectedRange: {
+              editors: { users },
+              namedRangeId: "",
+              range: {
+                sheetId,
+                startColumnIndex: dateDebutIndex,
+                startRowIndex: rowIndex,
+                endColumnIndex: garantieIndex,
+                endRowIndex: rowIndex,
+              },
+            },
+          },
+        },
+        {
+          addProtectedRange: {
+            protectedRange: {
+              editors: { users },
+              namedRangeId: "",
+              range: {
+                sheetId,
+                startColumnIndex: clientIndex,
+                startRowIndex: rowIndex,
+                endColumnIndex: percentIndex,
+                endRowIndex: rowIndex,
+              },
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  const garantieDate = contratLine[TAB_CONTRATS_COL_DATE_FIN_GARANTIE];
+  const rupture = contratLine[TAB_CONTRATS_COL_RUPTURE];
+
+  if (
+    rupture ||
+    (garantieDate && today.getTime() > new Date(garantieDate).getTime())
+  ) {
+    // bloquer les cellules "rupture" dont la date de garantie est dépassée
+
+    console.log("locking rupture date of !", rowIndex);
+
+    const ruptureIndex = contratLineKeys.findIndex(
+      (key) => key === TAB_CONTRATS_COL_RUPTURE
+    );
+
+    await sheetApp.spreadsheets.batchUpdate({
+      spreadsheetId: collabSheetId,
+      requestBody: {
+        requests: [
+          {
+            addProtectedRange: {
+              protectedRange: {
+                editors: { users },
+                namedRangeId: "",
+                range: {
+                  sheetId,
+                  startColumnIndex: ruptureIndex,
+                  startRowIndex: rowIndex,
+                  endColumnIndex: ruptureIndex,
+                  endRowIndex: rowIndex,
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+  }
+};
+
+type ImportDatasProps = {
+  emailAlert: boolean;
+  mainSpreadsheetId: string;
+  tabList: {
+    sheetId: string;
+    sheetName: string;
+  }[];
+};
+
+const importDatas = async ({
+  emailAlert = true,
+  mainSpreadsheetId,
+  tabList,
+}: ImportDatasProps) => {
+  tabData.clearCache();
+  const driveApp = appDrive();
+
+  const collabData = await tabData.get(
+    mainSpreadsheetId,
+    tabList,
+    TAB_NAME_COLLAB
+  );
+  const allContratData = await tabData.get(
+    mainSpreadsheetId,
+    tabList,
+    TAB_NAME_CONTRATS,
+    2
+  );
+
+  const alertList: string[] = [];
+  if (emailAlert) {
+    const paramsData = await tabData.get(
+      mainSpreadsheetId,
+      tabList,
+      TAB_NAME_PARAMETRES
+    );
+
+    paramsData.forEach((line) => {
+      if (line[TAB_PARAMETRES_COL_EMAIL])
+        alertList.push(line[TAB_PARAMETRES_COL_EMAIL]);
+    });
+  }
+
+  // vérifier existence du fichier collaborateur
+
+  for await (const collabLine of collabData) {
+    const collabName = collabLine[TAB_COLLAB_COL_COLLAB];
+    const collabEmail = collabLine[TAB_COLLAB_COL_EMAIL];
+    let collabId = collabLine[TAB_COLLAB_COL_SHEET_ID];
+
+    if (collabName && collabEmail) {
+      let sheetFound = false;
+      let collabSheet = null;
+
+      if (collabId) {
+        try {
+          const fileInfo = await driveApp.files.get({
+            fileId: collabId,
+            fields: "*",
+          });
+
+          const isTrashed = fileInfo.data.trashed;
+
+          if (!isTrashed) {
+            sheetFound = true;
+            console.log(`sheet ${collabName} found 😀`);
+          } else console.log(`sheet ${collabName} is trashed 🗑️`);
+        } catch {
+          console.log(`sheet ${collabName} not found 😱`);
+        }
+      }
+
+      if (sheetFound) {
+        // récupérer les infos contrats dans fichier collaborateur
+        const collabTabList = await getSheetTabIds(collabId);
+
+        const collabContratData = await tabData.get(
+          collabId,
+          collabTabList,
+          TAB_NAME_CONTRATS
+        );
+
+        collabContratData.forEach(async (line, lineIndex) => {
+          const id = line[TAB_CONTRATS_COL_ID];
+          const dateDebut = line[TAB_CONTRATS_COL_DATE_DEBUT];
+          const nbGarantyWeeks = line[TAB_CONTRATS_COL_NB_SEMAINE_GARANTIE];
+          const client = line[TAB_CONTRATS_COL_CLIENT];
+          const type = line[TAB_CONTRATS_COL_TYPE];
+          const candidat = line[TAB_CONTRATS_COL_CANDIDAT];
+          const description = line[TAB_CONTRATS_COL_DESCRIPTION];
+          const salaire = line[TAB_CONTRATS_COL_SALAIRE];
+          const percent = line[TAB_CONTRATS_COL_PERCENT];
+
+          if (
+            id &&
+            dateDebut &&
+            nbGarantyWeeks &&
+            client &&
+            type &&
+            candidat &&
+            description &&
+            salaire &&
+            percent
+          ) {
+            console.log("contrat found !", id);
+            // si contrat correctement rempli
+            // rechercher contrat dans fichier chapeau
+            let allContratLineIndex = "";
+
+            const filteredAllContratData = allContratData.filter(
+              (contrat) => contrat[TAB_CONTRATS_COL_ID] === id
+            );
+            if (filteredAllContratData.length)
+              allContratLineIndex = filteredAllContratData[0].rowIndex;
+
+            const colIndex =
+              Object.keys(filteredAllContratData).findIndex(
+                (col) => col === TAB_CONTRATS_COL_IMPORT_ID
+              ) + 1;
+
+            const trimedLine = mapTrimObj(line, COL2KEEP_CONTRATS);
+
+            const trimedArray = Object.values(trimedLine);
+
+            // si trouvé > mettre à jour les datas dans chapeau
+            if (allContratLineIndex !== "") {
+              console.log("update data line ", allContratLineIndex);
+
+              await updateSheetRange({
+                sheetId: mainSpreadsheetId,
+                tabName: TAB_NAME_CONTRATS,
+                startCoords: [parseInt(allContratLineIndex, 10), colIndex],
+                data: [trimedArray],
+              });
+            } // si pas trouvé > ajouter nouveau contrat dans chapeau
+            else {
+              console.log("add new contrat");
+
+              const allContratIndex = allContratData.map((line) =>
+                parseInt(line.rowIndex, 10)
+              );
+
+              let emptyLineIndex: number | false = false; // recherche premiere ligne vide [sans ID]
+              let indexToCheck = 3;
+
+              while (emptyLineIndex === false) {
+                if (allContratIndex.includes(indexToCheck)) indexToCheck++;
+                else emptyLineIndex = indexToCheck;
+              }
+
+              await updateSheetRange({
+                sheetId: mainSpreadsheetId,
+                tabName: TAB_NAME_CONTRATS,
+                startCoords: [emptyLineIndex, 1],
+                data: [trimedArray],
+              });
+
+              await updateSheetRange({
+                sheetId: mainSpreadsheetId,
+                tabName: TAB_NAME_CONTRATS,
+                startCoords: [emptyLineIndex, colIndex],
+                data: [trimedArray],
+              });
+
+              // envoyer un email au owner du chapeau
+              if (emailAlert) {
+                const gMailApp = appGmail();
+
+                const dateDebutDate = new Date(dateDebut);
+
+                gMailApp.users.messages.send({
+                  requestBody: {
+                    payload: {
+                      body: {
+                        data: `date début ${dateDebutDate.getDate()}/${
+                          dateDebutDate.getMonth() + 1
+                        }/${dateDebutDate.getFullYear()}<br>
+                        client ${client}<br>
+                        type ${type}<br>
+                        réalisé par ${collabName}<br>`,
+                      },
+                      headers: [
+                        {
+                          name: "To",
+                          value: alertList.join(","),
+                        },
+                        {
+                          name: "Subject",
+                          value: `*** NOUVEAU CONTRAT ${candidat.toUpperCase()} ***`,
+                        },
+                      ],
+                    },
+                  },
+                });
+              }
+            }
+
+            lockContrat({
+              collabSheetId: collabId,
+              users: alertList,
+              collabTabList,
+              contratLine: line,
+            });
+          }
+        });
+      }
+    }
+  }
 };
 
 type HandleContratUpdateProps = {
@@ -377,11 +730,28 @@ const createNewSheet = async ({
       forceContratUpdate: true,
     });
 
+    const paramsData = await tabData.get(
+      mainSpreadsheetId,
+      tabList,
+      TAB_NAME_PARAMETRES
+    );
+
     // donner accès
     await driveApp.permissions.create({
       fileId,
       requestBody: { role: "writer", type: "user", emailAddress: collabEmail },
     });
+
+    for await (const params of paramsData) {
+      await driveApp.permissions.create({
+        fileId,
+        requestBody: {
+          role: "writer",
+          type: "user",
+          emailAddress: params[TAB_PARAMETRES_COL_EMAIL],
+        },
+      });
+    }
   }
 
   return fileId || "";
@@ -407,8 +777,6 @@ const buildCollab = async ({
 
   // clear cache
   tabData.clearCache();
-
-  const today = new Date();
 
   const driveApp = appDrive();
 
@@ -491,7 +859,7 @@ const buildCollab = async ({
     lineIndex++;
   }
 
-  //   importDatas(true)
+  importDatas({ emailAlert: true, mainSpreadsheetId, tabList });
 
   return collabData;
 };

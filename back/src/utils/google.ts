@@ -45,3 +45,15 @@ export const appSheet = () => {
 
   return sheets;
 };
+
+export const appGmail = () => {
+  const scopes = ["https://www.googleapis.com/auth/gmail.send"];
+  const auth = getAuth(scopes);
+
+  const gmail = google.gmail({
+    version: "v1",
+    auth,
+  });
+
+  return gmail;
+};

@@ -1,6 +1,5 @@
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import * as dotenv from "dotenv";
-import AlphanumericEncoder from "alphanumeric-encoder";
 
 dotenv.config();
 
