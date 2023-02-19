@@ -1,5 +1,6 @@
 import { sheets_v4 } from "googleapis";
 import { GaxiosResponse } from "googleapis-common";
+import { AddProtectedRangeProps, batchUpdate } from "./batchUpdate";
 import { TabListItem } from "./clearSheetRows";
 import { getSheetTabIds } from "./getSheetTabIds";
 import { appSheet } from "./google";
@@ -7,9 +8,12 @@ import { importSheetData } from "./importSheetData";
 import { updateSheetRange } from "./updateSheetRange";
 
 type TabCache = {
-  [key: string]: {
+  [key: string]: ({
     [key: string]: string;
-  }[];
+  } & {
+    rowIndex: number;
+    a1Range: string;
+  })[];
 };
 
 type TabIdsCache = {
@@ -40,17 +44,42 @@ let nbInQueueRead = 0;
 let nbInQueueWrite = 0;
 
 const DELAY = 2000; // in ms
+const CATCH_DELAY_MULTIPLIER = 10;
 
-const handleReadDelay = async <T>(callback: () => Promise<T>) => {
+const handleReadTryCatch = async <T>(
+  callback: () => Promise<T>,
+  delayMultiplier?: number
+) => {
+  let res: T | undefined = undefined;
+
+  try {
+    res = await callback();
+    lastReadRequestTime = new Date().getTime();
+    nbInQueueRead -= delayMultiplier || 1;
+  } catch (e) {
+    console.log("inside catch 💩");
+    lastReadRequestTime = new Date().getTime();
+    nbInQueueRead -= delayMultiplier || 1;
+
+    res = await handleReadDelay(callback, CATCH_DELAY_MULTIPLIER);
+  } finally {
+    return res as T;
+  }
+};
+
+const handleReadDelay = async <T>(
+  callback: () => Promise<T>,
+  delayMultiplier?: number
+) => {
   const currentTime = new Date().getTime();
-  nbInQueueRead++;
+  nbInQueueRead += delayMultiplier || 1;
 
   if (
     lastReadRequestTime &&
     currentTime < lastReadRequestTime + DELAY * nbInQueueRead
   ) {
     console.log(
-      "*** force DELAY",
+      "*** force DELAY [READ] ",
       nbInQueueRead,
       lastReadRequestTime
         ? lastReadRequestTime + DELAY * nbInQueueRead - currentTime
@@ -66,24 +95,45 @@ const handleReadDelay = async <T>(callback: () => Promise<T>) => {
     );
   }
 
-  const res = await callback();
-
-  lastReadRequestTime = new Date().getTime();
-  nbInQueueRead--;
+  const res: T = await handleReadTryCatch(callback, delayMultiplier);
 
   return res;
 };
 
-const handleWriteDelay = async <T>(callback: () => Promise<T>) => {
+const handleWriteTryCatch = async <T>(
+  callback: () => Promise<T>,
+  delayMultiplier?: number
+) => {
+  let res: T | undefined = undefined;
+
+  try {
+    res = await callback();
+    lastWriteRequestTime = new Date().getTime();
+    nbInQueueWrite -= delayMultiplier || 1;
+  } catch (e) {
+    console.log("inside catch 💩");
+    lastWriteRequestTime = new Date().getTime();
+    nbInQueueWrite -= delayMultiplier || 1;
+
+    res = await handleWriteDelay(callback, CATCH_DELAY_MULTIPLIER);
+  } finally {
+    return res as T;
+  }
+};
+
+const handleWriteDelay = async <T>(
+  callback: () => Promise<T>,
+  delayMultiplier?: number
+) => {
   const currentTime = new Date().getTime();
-  nbInQueueWrite++;
+  nbInQueueWrite += delayMultiplier || 1;
 
   if (
     lastWriteRequestTime &&
     currentTime < lastWriteRequestTime + DELAY * nbInQueueWrite
   ) {
     console.log(
-      "*** force DELAY",
+      "*** force DELAY [WRITE]",
       nbInQueueWrite,
       lastWriteRequestTime
         ? lastWriteRequestTime + DELAY * nbInQueueWrite - currentTime
@@ -99,10 +149,7 @@ const handleWriteDelay = async <T>(callback: () => Promise<T>) => {
     );
   }
 
-  const res = await callback();
-
-  lastWriteRequestTime = new Date().getTime();
-  nbInQueueWrite--;
+  const res: T = await handleWriteTryCatch(callback);
 
   return res;
 };
@@ -129,7 +176,7 @@ export const sheetAPI = {
     tabName: string,
     headerRowIndex?: number
   ) => {
-    console.log("*** sheetAPI.getTabData", sheetId, tabName);
+    console.log("*** sheetAPI.getTabData", tabName);
 
     const tabId = tabList.filter((tab) => tab.sheetName === tabName)[0]
       ?.sheetId;
@@ -156,7 +203,6 @@ export const sheetAPI = {
     ranges,
   }: GetTabMetaDataProps) => {
     console.log("*** sheetAPI.getTabMetaData");
-    nbInQueueRead++;
 
     const metaData = await handleReadDelay(async () => {
       const sheetApp = appSheet();
@@ -172,7 +218,6 @@ export const sheetAPI = {
   },
 
   clearCache: () => {
-    // clear cache
     tabCache = {};
     tabIdsCache = {};
   },
@@ -193,29 +238,35 @@ export const sheetAPI = {
         data,
       });
     });
+  },
 
-    // const currentTime = new Date().getTime();
+  addBatchProtectedRange: ({
+    spreadsheetId,
+    editors,
+    namedRangeId,
+    sheetId,
+    startColumnIndex,
+    startRowIndex,
+    endColumnIndex,
+    endRowIndex,
+  }: AddProtectedRangeProps) => {
+    batchUpdate.addProtectedRange({
+      spreadsheetId,
+      editors,
+      namedRangeId,
+      sheetId,
+      startColumnIndex,
+      startRowIndex,
+      endColumnIndex,
+      endRowIndex,
+    });
+  },
 
-    // if (lastWriteRequestTime && currentTime < lastWriteRequestTime + DELAY) {
-    //   console.log(
-    //     "*** force DELAY",
-    //     lastWriteRequestTime ? lastWriteRequestTime + DELAY - currentTime : 0
-    //   );
-    //   await new Promise((resolve) =>
-    //     setTimeout(
-    //       () => resolve(null),
-    //       lastWriteRequestTime ? lastWriteRequestTime + DELAY - currentTime : 0
-    //     )
-    //   );
-    // }
+  runBatchProtectedRange: async (spreadsheetId: string) => {
+    console.log("*** sheetAPI.runBatchProtectedRange");
 
-    // await updateSheetRange({
-    //   sheetId,
-    //   tabName,
-    //   startCoords,
-    //   data,
-    // });
-
-    // lastWriteRequestTime = new Date().getTime();
+    await handleWriteDelay(async () => {
+      await batchUpdate.runProtectedRange(spreadsheetId);
+    });
   },
 };

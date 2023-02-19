@@ -89,15 +89,19 @@ const encodeBase64 = (data: string) => {
   return Buffer.from(data).toString("base64");
 };
 
-const mapTrimObj = (
-  row: {
-    [key: string]: string;
-  },
-  colsToKeep: string[]
-) => {
-  const filteredRow: {
-    [key: string]: string;
-  } = {};
+type BaseRow = {
+  [key: string]: string;
+};
+
+type ExtRow = BaseRow & {
+  rowIndex: number;
+  a1Range: string;
+};
+
+type MapTrimObjProps = (row: ExtRow, colsToKeep: string[]) => BaseRow;
+
+const mapTrimObj: MapTrimObjProps = (row, colsToKeep) => {
+  const filteredRow: BaseRow = {};
 
   colsToKeep.forEach(
     (colName) =>
@@ -106,6 +110,12 @@ const mapTrimObj = (
         : "")
   );
 
+  // if (Object.keys(row).includes("rowIndex"))
+  // return {
+  //   ...filteredRow,
+  //   rowIndex: row.rowIndex,
+  //   a1Range: row.a1Range,
+  // } as ExtRow;
   return filteredRow;
 };
 
@@ -116,9 +126,7 @@ type LockContratProps = {
     sheetId: string;
     sheetName: string;
   }[];
-  contratLine: {
-    [key: string]: string;
-  };
+  contratLine: ExtRow;
 };
 
 const lockContrat = async ({
@@ -127,7 +135,7 @@ const lockContrat = async ({
   collabTabList,
   contratLine,
 }: LockContratProps) => {
-  const sheetApp = appSheet();
+  // const sheetApp = appSheet();
   const today = new Date();
 
   const sheetId = parseInt(
@@ -136,8 +144,8 @@ const lockContrat = async ({
     10
   );
 
-  console.log("contratLine.rowIndex", contratLine.rowIndex);
-  const rowIndex = parseInt(contratLine.rowIndex, 10);
+  // console.log("contratLine.rowIndex", contratLine.rowIndex);
+  const rowIndex = contratLine.rowIndex - 1;
 
   const contratLineKeys = Object.keys(contratLine);
 
@@ -154,42 +162,26 @@ const lockContrat = async ({
     (key) => key === TAB_CONTRATS_COL_PERCENT
   );
 
-  await sheetApp.spreadsheets.batchUpdate({
+  sheetAPI.addBatchProtectedRange({
     spreadsheetId: collabSheetId,
-    requestBody: {
-      requests: [
-        {
-          addProtectedRange: {
-            protectedRange: {
-              editors: { users },
-              namedRangeId: "",
-              range: {
-                sheetId,
-                startColumnIndex: dateDebutIndex,
-                startRowIndex: rowIndex,
-                endColumnIndex: garantieIndex,
-                endRowIndex: rowIndex,
-              },
-            },
-          },
-        },
-        {
-          addProtectedRange: {
-            protectedRange: {
-              editors: { users },
-              namedRangeId: "",
-              range: {
-                sheetId,
-                startColumnIndex: clientIndex,
-                startRowIndex: rowIndex,
-                endColumnIndex: percentIndex,
-                endRowIndex: rowIndex,
-              },
-            },
-          },
-        },
-      ],
-    },
+    editors: users,
+    namedRangeId: `lock-${rowIndex}-CD`,
+    sheetId,
+    startColumnIndex: dateDebutIndex,
+    startRowIndex: rowIndex,
+    endColumnIndex: garantieIndex,
+    endRowIndex: rowIndex,
+  });
+
+  sheetAPI.addBatchProtectedRange({
+    spreadsheetId: collabSheetId,
+    editors: users,
+    namedRangeId: `lock-${rowIndex}-GL`,
+    sheetId,
+    startColumnIndex: clientIndex,
+    startRowIndex: rowIndex,
+    endColumnIndex: percentIndex,
+    endRowIndex: rowIndex,
   });
 
   const garantieDate = contratLine[TAB_CONTRATS_COL_DATE_FIN_GARANTIE];
@@ -201,35 +193,26 @@ const lockContrat = async ({
   ) {
     // bloquer les cellules "rupture" dont la date de garantie est dépassée
 
-    console.log("locking rupture date of !", rowIndex);
+    // console.log("locking rupture date of ", rowIndex);
 
     const ruptureIndex = contratLineKeys.findIndex(
       (key) => key === TAB_CONTRATS_COL_RUPTURE
     );
 
-    await sheetApp.spreadsheets.batchUpdate({
+    sheetAPI.addBatchProtectedRange({
       spreadsheetId: collabSheetId,
-      requestBody: {
-        requests: [
-          {
-            addProtectedRange: {
-              protectedRange: {
-                editors: { users },
-                namedRangeId: "",
-                range: {
-                  sheetId,
-                  startColumnIndex: ruptureIndex,
-                  startRowIndex: rowIndex,
-                  endColumnIndex: ruptureIndex,
-                  endRowIndex: rowIndex,
-                },
-              },
-            },
-          },
-        ],
-      },
+      editors: users,
+      namedRangeId: `lock-${rowIndex}-E`,
+      sheetId,
+      startColumnIndex: ruptureIndex,
+      startRowIndex: rowIndex,
+      endColumnIndex: ruptureIndex,
+      endRowIndex: rowIndex,
     });
   }
+
+  // run batch
+  await sheetAPI.runBatchProtectedRange(collabSheetId);
 };
 
 type ImportDatasProps = {
@@ -342,7 +325,7 @@ const importDatas = async ({
             console.log("contrat found !", id);
             // si contrat correctement rempli
             // rechercher contrat dans fichier chapeau
-            let allContratLineIndex = "";
+            let allContratLineIndex: number | undefined = undefined;
 
             const filteredAllContratData = allContratData.filter(
               (contrat) => contrat[TAB_CONTRATS_COL_ID] === id
@@ -351,7 +334,7 @@ const importDatas = async ({
               allContratLineIndex = filteredAllContratData[0].rowIndex;
 
             const colIndex =
-              Object.keys(filteredAllContratData).findIndex(
+              Object.keys(filteredAllContratData[0]).findIndex(
                 (col) => col === TAB_CONTRATS_COL_IMPORT_ID
               ) + 1;
 
@@ -366,16 +349,18 @@ const importDatas = async ({
               await sheetAPI.updateRange({
                 sheetId: mainSpreadsheetId,
                 tabName: TAB_NAME_CONTRATS,
-                startCoords: [parseInt(allContratLineIndex, 10), colIndex],
+                startCoords: [allContratLineIndex, colIndex],
                 data: [trimedArray],
               });
             } // si pas trouvé > ajouter nouveau contrat dans chapeau
             else {
               console.log("add new contrat");
 
-              const allContratIndex = allContratData.map((line) =>
-                parseInt(line.rowIndex, 10)
+              const allContratIndex = allContratData.map(
+                (line) => line.rowIndex
               );
+
+              console.log("allContratIndex", allContratIndex);
 
               let emptyLineIndex: number | false = false; // recherche premiere ligne vide [sans ID]
               let indexToCheck = 3;
@@ -456,9 +441,7 @@ type HandleContratUpdateProps = {
     sheetId: string;
     sheetName: string;
   }[];
-  contratData: {
-    [key: string]: string;
-  }[];
+  contratData: BaseRow[];
   collabName: string;
 };
 
@@ -468,7 +451,43 @@ const handleContratUpdate = async ({
   contratData,
   collabName,
 }: HandleContratUpdateProps) => {
-  const sheetApp = appSheet();
+  // retirer datavalidation
+
+  // const sheetApp = appSheet();
+
+  // const test = await sheetApp.spreadsheets.get({
+  //   spreadsheetId: collabFileId,
+  //   ranges: ["'CONTRATS'!C:L"],
+  //   // includeGridData: true,
+  //   fields:
+  //     "sheets(data/rowData/values/dataValidation,properties(sheetId,title))",
+  // });
+
+  // const rowData = test.data.sheets
+  //   ?.filter((sheet) => sheet.properties?.title === "CONTRATS")[0]
+  //   .data?.map((data) => data.rowData);
+
+  // const rowVals =
+  //   rowData && rowData.map((row) => row && row.map((val) => val.values));
+
+  // const dataValidations =
+  //   rowVals &&
+  //   rowVals
+  //     .map(
+  //       (cellData) =>
+  //         cellData &&
+  //         cellData
+  //           .filter((dv) => dv !== undefined)
+  //           .map((cell) => cell && cell.map((c) => c && c.dataValidation))
+  //           .flat()
+  //           .filter((dv) => dv !== undefined)
+  //     )
+  //     .flat()
+  //     .filter((dv) => dv !== undefined);
+
+  // console.log("dataValidation", dataValidation);
+
+  // console.log("test", JSON.stringify(test));
 
   // onglet "CONTRATS" dans copie de la trame
   const contratsByCollabValues = await sheetAPI.getTabData(
@@ -550,7 +569,7 @@ const handleContratUpdate = async ({
 
     // effacer les précédentes données ?
 
-    sheetAPI.updateRange({
+    await sheetAPI.updateRange({
       sheetId: collabFileId,
       tabName: TAB_NAME_CONTRATS,
       startCoords: [2, 1],
@@ -588,7 +607,7 @@ const buildTabData = async ({
   )
     .filter((row) => (filterByCol ? row[filterByCol] === collabName : true))
     .map((row) => mapTrimObj(row, colToKeep)),
-  mapTrimObj({}, colToKeep),
+  mapTrimObj({ rowIndex: -1, a1Range: "" } as ExtRow, colToKeep),
 ];
 
 type UpdateWholeDatasProps = {
@@ -823,29 +842,30 @@ const buildCollab = async ({
       let collabSheet = null;
 
       if (collabId) {
-        try {
-          // console.log({ collabName, collabEmail, collabId });
-          const fileInfo = await driveApp.files.get({
-            fileId: collabId,
-            fields: "*",
-          });
+        // try {
+        // console.log({ collabName, collabEmail, collabId });
+        const fileInfo = await driveApp.files.get({
+          fileId: collabId,
+          fields: "*",
+        });
 
-          const isTrashed = fileInfo.data.trashed;
+        const isTrashed = fileInfo.data.trashed;
 
-          // console.log(collabName, "fileInfo", fileInfo.data);
+        // console.log(collabName, "fileInfo", fileInfo.data);
 
-          //   collabSheet = SpreadsheetApp.openById(collabId);
-          // const isTrashed = DriveApp.getFileById(collabId).isTrashed();
-          if (!isTrashed) {
-            sheetFound = true;
-            console.log(`sheet ${collabName} found 😀`);
-          } else console.log(`sheet ${collabName} is trashed 🗑️`);
-        } catch {
-          console.log(`sheet ${collabName} not found 😱`);
-        }
+        //   collabSheet = SpreadsheetApp.openById(collabId);
+        // const isTrashed = DriveApp.getFileById(collabId).isTrashed();
+        if (!isTrashed) {
+          sheetFound = true;
+          console.log(`sheet ${collabName} found 😀`);
+        } else console.log(`sheet ${collabName} is trashed 🗑️`);
+        // } catch {
+        //   console.log(`sheet ${collabName} not found 😱`);
+        // }
       }
 
       if (!sheetFound) {
+        console.log(`sheet ${collabName} not found 😱`);
         // si existe pas >> créer le fichier
         collabId = await createNewSheet({
           collabName,

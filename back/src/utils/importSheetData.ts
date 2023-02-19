@@ -45,10 +45,15 @@ export const importSheetData = async (
 
       headerValues.forEach((header) => (newObj[header] = row[header]));
 
-      return newObj;
+      return { ...newObj, rowIndex: row.rowIndex, a1Range: row.a1Range };
     });
 
-    return datas;
+    return datas as ({
+      [key: string]: string;
+    } & {
+      rowIndex: number;
+      a1Range: string;
+    })[];
   }
   return [];
 };
