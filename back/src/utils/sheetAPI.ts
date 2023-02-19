@@ -149,7 +149,7 @@ const handleWriteDelay = async <T>(
     );
   }
 
-  const res: T = await handleWriteTryCatch(callback);
+  const res: T = await handleWriteTryCatch(callback, delayMultiplier);
 
   return res;
 };
