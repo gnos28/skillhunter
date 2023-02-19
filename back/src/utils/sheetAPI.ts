@@ -43,7 +43,7 @@ let lastWriteRequestTime: number | undefined = undefined;
 let nbInQueueRead = 0;
 let nbInQueueWrite = 0;
 
-const DELAY = 2000; // in ms
+const DELAY = 200; // in ms
 const CATCH_DELAY_MULTIPLIER = 10;
 
 const handleReadTryCatch = async <T>(
