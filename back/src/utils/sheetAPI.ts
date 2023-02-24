@@ -57,7 +57,7 @@ const handleReadTryCatch = async <T>(
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
   } catch (e) {
-    console.log("inside catch 💩");
+    console.log("inside catch 💩", e);
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
 
