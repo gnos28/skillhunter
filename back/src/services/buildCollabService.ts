@@ -80,7 +80,7 @@ export const buildCollab = async ({
   let lineIndex = 2;
 
   const nbCollab = collabData.reduce(
-    (acc, val) => (val[TAB_COLLAB_COL_SHEET_ID] ? acc + 1 : acc),
+    (acc, val) => (val[TAB_COLLAB_COL_COLLAB] ? acc + 1 : acc),
     0
   );
   exportProgression.updateNbIncrement({

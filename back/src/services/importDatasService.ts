@@ -36,7 +36,7 @@ export const importDatas = async ({
   emailAlert = true,
   mainSpreadsheetId,
   tabList: argTabList,
-  initProgress,
+  initProgress = false,
 }: ImportDatasProps) => {
   console.log("****** importDatas ******");
 
