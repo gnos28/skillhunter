@@ -58,18 +58,13 @@ export const batchUpdate = {
     if (requests) {
       console.log("requests count : ", requests.length);
       // console.log("requests", requests);
-
-      try {
-        await sheetApp.spreadsheets.batchUpdate({
-          spreadsheetId,
-          requestBody: {
-            requests,
-          },
-        });
-        protectedRangeBatchBuffer[spreadsheetId] = [];
-      } catch (e) {
-        console.error(e);
-      }
+      await sheetApp.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests,
+        },
+      });
+      protectedRangeBatchBuffer[spreadsheetId] = [];
     }
   },
 };
