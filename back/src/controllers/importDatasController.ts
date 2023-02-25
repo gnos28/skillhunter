@@ -7,8 +7,9 @@ importDatasController.importDatas = async (req, res) => {
   try {
     const { emailAlert, mainSpreadsheetId } = req.body;
 
-    const buildResult = await importDatas({ emailAlert, mainSpreadsheetId });
-    res.send(buildResult);
+    importDatas({ emailAlert, mainSpreadsheetId });
+
+    res.send("processing request");
   } catch (err: unknown) {
     console.error(err);
     res.sendStatus(500);

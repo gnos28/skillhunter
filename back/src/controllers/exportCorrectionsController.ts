@@ -7,10 +7,11 @@ exportCorrectionsController.exportCorrections = async (req, res) => {
   try {
     const { mainSpreadsheetId } = req.body;
 
-    const exportResult = await exportCorrections({
+    exportCorrections({
       mainSpreadsheetId,
     });
-    res.send(exportResult);
+
+    res.send("processing request");
   } catch (err: unknown) {
     console.error(err);
     res.sendStatus(500);

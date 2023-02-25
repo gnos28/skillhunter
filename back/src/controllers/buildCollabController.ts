@@ -10,12 +10,13 @@ buildCollabController.buildCollab = async (req, res) => {
 
     await storeBodyToFs({ mainSpreadsheetId, folderId, trameId });
 
-    const buildResult = await buildCollab({
+    buildCollab({
       mainSpreadsheetId,
       folderId,
       trameId,
     });
-    res.send(buildResult);
+
+    res.send("processing request");
   } catch (err: unknown) {
     console.error(err);
     res.sendStatus(500);
