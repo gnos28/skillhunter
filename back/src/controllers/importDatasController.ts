@@ -7,7 +7,7 @@ importDatasController.importDatas = async (req, res) => {
   try {
     const { emailAlert, mainSpreadsheetId } = req.body;
 
-    importDatas({ emailAlert, mainSpreadsheetId });
+    importDatas({ emailAlert, mainSpreadsheetId, initProgress: true });
 
     res.send("processing request");
   } catch (err: unknown) {

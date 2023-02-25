@@ -53,6 +53,7 @@ let writeCatchCount = 0;
 
 const DELAY = 200; // in ms
 const CATCH_DELAY_MULTIPLIER = 10;
+const MAX_CATCH_COUNT = 60;
 
 const handleReadTryCatch = async <T>(
   callback: () => Promise<T>,
@@ -65,12 +66,12 @@ const handleReadTryCatch = async <T>(
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
   } catch (e: any) {
-    console.log("inside catch 💩", readCatchCount, e.message);
+    console.log(`inside catch 💩 #${readCatchCount}`, e.message);
     readCatchCount++;
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
 
-    if (readCatchCount < 10)
+    if (readCatchCount < MAX_CATCH_COUNT)
       res = await handleReadDelay(callback, CATCH_DELAY_MULTIPLIER);
   } finally {
     readCatchCount = 0;
@@ -122,12 +123,12 @@ const handleWriteTryCatch = async <T>(
     lastWriteRequestTime = new Date().getTime();
     nbInQueueWrite -= delayMultiplier || 1;
   } catch (e: any) {
-    console.log("inside catch 💩", writeCatchCount, e.message);
+    console.log(`inside catch 💩 #${writeCatchCount}`, e.message);
     writeCatchCount++;
     lastWriteRequestTime = new Date().getTime();
     nbInQueueWrite -= delayMultiplier || 1;
 
-    if (writeCatchCount < 10)
+    if (writeCatchCount < MAX_CATCH_COUNT)
       res = await handleWriteDelay(callback, CATCH_DELAY_MULTIPLIER);
   } finally {
     writeCatchCount = 0;

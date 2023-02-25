@@ -4,6 +4,9 @@ import {
   COL2KEEP_CLIENTS,
   COL2KEEP_CONTRATS,
   COL2KEEP_CONTRATS_IMPORT,
+  TAB_COLLAB_COL_COLLAB,
+  TAB_COLLAB_COL_EMAIL,
+  TAB_COLLAB_COL_SHEET_ID,
   TAB_CONTRATS_COL_CANDIDAT,
   TAB_CONTRATS_COL_CLIENT,
   TAB_CONTRATS_COL_COLLAB,
@@ -19,6 +22,7 @@ import { getValuesFromBaseRow } from "../utils/getValuesFromBaseRow";
 import { appDrive } from "../utils/google";
 import { sheetAPI } from "../utils/sheetAPI";
 import { buildTabData } from "./buildTabData";
+import { exportProgression } from "./exportProgression";
 dotenv.config();
 
 type ExportCorrectionsProps = {
@@ -29,6 +33,12 @@ export const exportCorrections = async ({
   mainSpreadsheetId,
 }: ExportCorrectionsProps) => {
   if (mainSpreadsheetId === undefined) throw new Error("missing id");
+
+  await exportProgression.init({
+    spreadsheetId: mainSpreadsheetId,
+    actionName: "exportCorrections",
+    nbIncrement: 1,
+  });
 
   const tabList = await sheetAPI.getTabIds(mainSpreadsheetId);
 
@@ -76,10 +86,23 @@ export const exportCorrections = async ({
     (col) => col === TAB_CONTRATS_COL_IMPORT_ID
   );
 
+  const nbCollab = collabData.reduce(
+    (acc, val) => (val[TAB_COLLAB_COL_SHEET_ID] ? acc + 1 : acc),
+    0
+  );
+
+  exportProgression.updateNbIncrement({
+    actionName: "exportCorrections",
+    nbIncrement: nbCollab + 2,
+  });
+  await exportProgression.increment({
+    actionName: "exportCorrections",
+  });
+
   for await (const line of collabData) {
-    const collabName = line["NOM PRENOM"];
-    const collabEmail = line["EMAIL"];
-    let collabId = line["SHEET ID"];
+    const collabName = line[TAB_COLLAB_COL_COLLAB];
+    const collabEmail = line[TAB_COLLAB_COL_EMAIL];
+    let collabId = line[TAB_COLLAB_COL_SHEET_ID];
     const driveApp = appDrive();
 
     if (collabName && collabEmail) {
@@ -177,6 +200,9 @@ export const exportCorrections = async ({
           data: updatedCollabContratValues,
         });
       }
+      await exportProgression.increment({
+        actionName: "exportCorrections",
+      });
     }
   }
 
@@ -186,6 +212,12 @@ export const exportCorrections = async ({
     startCoords: [3, allContratsImportIdIndex + 1],
     data: contratsImportValues,
   });
+
+  await exportProgression.increment({
+    actionName: "exportCorrections",
+  });
+
+  console.log("****** END OF exportCorrections FUNCTION ******");
 
   return "";
 };

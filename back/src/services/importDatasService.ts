@@ -22,20 +22,30 @@ import {
 import { appDrive, appGmail } from "../utils/google";
 import { mapTrimObj } from "../utils/mapTrimObj";
 import { sheetAPI } from "../utils/sheetAPI";
+import { exportProgression } from "./exportProgression";
 import { lockContrat } from "./lockContratService";
 
 type ImportDatasProps = {
   emailAlert: boolean;
   mainSpreadsheetId: string;
   tabList?: TabListItem[];
+  initProgress?: boolean;
 };
 
 export const importDatas = async ({
   emailAlert = true,
   mainSpreadsheetId,
   tabList: argTabList,
+  initProgress,
 }: ImportDatasProps) => {
   console.log("****** importDatas ******");
+
+  if (initProgress)
+    await exportProgression.init({
+      spreadsheetId: mainSpreadsheetId,
+      actionName: "importDatas",
+      nbIncrement: 1,
+    });
 
   let tabList: TabListItem[] = [];
   if (!argTabList) tabList = await sheetAPI.getTabIds(mainSpreadsheetId);
@@ -69,6 +79,23 @@ export const importDatas = async ({
         alertList.push(line[TAB_PARAMETRES_COL_EMAIL]);
     });
   }
+
+  if (initProgress) {
+    const nbCollab = collabData.reduce(
+      (acc, val) => (val[TAB_COLLAB_COL_SHEET_ID] ? acc + 1 : acc),
+      0
+    );
+    exportProgression.updateNbIncrement({
+      actionName: "importDatas",
+      nbIncrement: nbCollab + 1,
+    });
+    await exportProgression.increment({
+      actionName: "importDatas",
+    });
+  } else
+    await exportProgression.increment({
+      actionName: "buildCollab",
+    });
 
   // vérifier existence du fichier collaborateur
 
@@ -240,6 +267,14 @@ export const importDatas = async ({
           }
         }
       }
+      if (initProgress)
+        await exportProgression.increment({
+          actionName: "exportCorrections",
+        });
+      else
+        await exportProgression.increment({
+          actionName: "buildCollab",
+        });
     }
   }
   console.log("****** END OF importDatas FUNCTION ******");

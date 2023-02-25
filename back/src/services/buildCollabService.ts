@@ -2,11 +2,17 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import { appDrive } from "../utils/google";
 import { sheetAPI } from "../utils/sheetAPI";
-import { TAB_NAME_COLLAB } from "../interfaces/const";
+import {
+  TAB_COLLAB_COL_COLLAB,
+  TAB_COLLAB_COL_EMAIL,
+  TAB_COLLAB_COL_SHEET_ID,
+  TAB_NAME_COLLAB,
+} from "../interfaces/const";
 import { createNewSheet } from "./createNewSheetService";
 import { importDatas } from "./importDatasService";
 import { updateWholeDatas } from "./updateWholeDatasService";
 import { getBodyFromFs } from "./getBodyFromFs";
+import { exportProgression } from "./exportProgression";
 
 const encodeBase64 = (data: string) => {
   return Buffer.from(data).toString("base64");
@@ -50,6 +56,12 @@ export const buildCollab = async ({
   )
     throw new Error("missing id");
 
+  await exportProgression.init({
+    spreadsheetId: mainSpreadsheetId,
+    actionName: "buildCollab",
+    nbIncrement: 1,
+  });
+
   // clear cache
   sheetAPI.clearCache();
 
@@ -65,12 +77,24 @@ export const buildCollab = async ({
 
   // vérifier existence du fichier collaborateur
   let nbCreatedFiles = 0;
-
   let lineIndex = 2;
+
+  const nbCollab = collabData.reduce(
+    (acc, val) => (val[TAB_COLLAB_COL_SHEET_ID] ? acc + 1 : acc),
+    0
+  );
+  exportProgression.updateNbIncrement({
+    actionName: "buildCollab",
+    nbIncrement: nbCollab * 2 + 2,
+  });
+  await exportProgression.increment({
+    actionName: "buildCollab",
+  });
+
   for await (const line of collabData) {
-    const collabName = line["NOM PRENOM"];
-    const collabEmail = line["EMAIL"];
-    let collabId = line["SHEET ID"];
+    const collabName = line[TAB_COLLAB_COL_COLLAB];
+    const collabEmail = line[TAB_COLLAB_COL_EMAIL];
+    let collabId = line[TAB_COLLAB_COL_SHEET_ID];
 
     if (collabName && collabEmail) {
       let sheetFound = false;
@@ -131,6 +155,10 @@ export const buildCollab = async ({
           mainSpreadsheetId,
           forceContratUpdate: false,
         });
+
+      await exportProgression.increment({
+        actionName: "buildCollab",
+      });
     }
     lineIndex++;
   }
