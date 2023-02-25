@@ -34,6 +34,8 @@ export const exportCorrections = async ({
 }: ExportCorrectionsProps) => {
   if (mainSpreadsheetId === undefined) throw new Error("missing id");
 
+  sheetAPI.clearCache();
+
   await exportProgression.init({
     spreadsheetId: mainSpreadsheetId,
     actionName: "exportCorrections",
