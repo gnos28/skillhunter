@@ -1,11 +1,14 @@
 import { ControllerType } from "../interfaces";
 import { buildCollab } from "../services/buildCollabService";
+import { storeBodyToFs } from "../services/storeBodyToFs";
 
 const buildCollabController: ControllerType = {};
 
 buildCollabController.buildCollab = async (req, res) => {
   try {
     const { mainSpreadsheetId, folderId, trameId } = req.body;
+
+    await storeBodyToFs({ mainSpreadsheetId, folderId, trameId });
 
     const buildResult = await buildCollab({
       mainSpreadsheetId,

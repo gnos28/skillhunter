@@ -6,6 +6,7 @@ services:
       target: dev
     volumes:
       - ./back/src:/back/src
+      - ./back/stored-files:/back/stored-files
     command: npm run start:dev
     ports:
       - "5000:5000"

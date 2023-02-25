@@ -6,6 +6,7 @@ import { TAB_NAME_COLLAB } from "../interfaces/const";
 import { createNewSheet } from "./createNewSheetService";
 import { importDatas } from "./importDatasService";
 import { updateWholeDatas } from "./updateWholeDatasService";
+import { getBodyFromFs } from "./getBodyFromFs";
 
 const encodeBase64 = (data: string) => {
   return Buffer.from(data).toString("base64");
@@ -18,10 +19,30 @@ type BuildCollabProps = {
 };
 
 export const buildCollab = async ({
-  mainSpreadsheetId,
-  folderId,
-  trameId,
+  mainSpreadsheetId: argMainSpreadsheetId,
+  folderId: argFolderId,
+  trameId: argTrameId,
 }: BuildCollabProps) => {
+  let mainSpreadsheetId: string | undefined = undefined;
+  let folderId: string | undefined = undefined;
+  let trameId: string | undefined = undefined;
+
+  if (
+    argMainSpreadsheetId === undefined ||
+    argFolderId === undefined ||
+    argTrameId === undefined
+  ) {
+    const storedFile = await getBodyFromFs();
+
+    mainSpreadsheetId = storedFile.mainSpreadsheetId;
+    folderId = storedFile.folderId;
+    trameId = storedFile.trameId;
+  } else {
+    mainSpreadsheetId = argMainSpreadsheetId;
+    folderId = argFolderId;
+    trameId = argTrameId;
+  }
+
   if (
     mainSpreadsheetId === undefined ||
     folderId === undefined ||

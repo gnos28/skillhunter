@@ -5,6 +5,8 @@ services:
       context: ./back/
       target: production
       network: host
+    volumes:
+      - ./back/stored-files:/back/stored-files
     command: pm2-runtime dist/index.js
     ports:
       - "5000:5000"

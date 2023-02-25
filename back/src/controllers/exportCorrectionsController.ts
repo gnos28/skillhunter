@@ -5,7 +5,7 @@ const exportCorrectionsController: ControllerType = {};
 
 exportCorrectionsController.exportCorrections = async (req, res) => {
   try {
-    const { mainSpreadsheetId, folderId, trameId } = req.body;
+    const { mainSpreadsheetId } = req.body;
 
     const exportResult = await exportCorrections({
       mainSpreadsheetId,
