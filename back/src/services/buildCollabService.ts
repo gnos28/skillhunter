@@ -13,9 +13,9 @@ const encodeBase64 = (data: string) => {
 };
 
 type BuildCollabProps = {
-  mainSpreadsheetId: string | undefined;
-  folderId: string | undefined;
-  trameId: string | undefined;
+  mainSpreadsheetId?: string | undefined;
+  folderId?: string | undefined;
+  trameId?: string | undefined;
 };
 
 export const buildCollab = async ({
