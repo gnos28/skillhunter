@@ -1,3 +1,4 @@
+import { TabListItem } from "../interfaces";
 import {
   TAB_NAME_COLLAB,
   TAB_NAME_CONTRATS,
@@ -26,18 +27,19 @@ import { lockContrat } from "./lockContratService";
 type ImportDatasProps = {
   emailAlert: boolean;
   mainSpreadsheetId: string;
-  tabList: {
-    sheetId: string;
-    sheetName: string;
-  }[];
+  tabList?: TabListItem[];
 };
 
 export const importDatas = async ({
   emailAlert = true,
   mainSpreadsheetId,
-  tabList,
+  tabList: argTabList,
 }: ImportDatasProps) => {
   console.log("****** importDatas ******");
+
+  let tabList: TabListItem[] = [];
+  if (!argTabList) tabList = await sheetAPI.getTabIds(mainSpreadsheetId);
+  else tabList = argTabList;
 
   sheetAPI.clearCache();
   const driveApp = appDrive();

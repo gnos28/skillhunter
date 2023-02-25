@@ -24,8 +24,10 @@ app.use(express.json());
 const router = express.Router();
 
 import buildCollab from "./routes/buildCollabRouter";
+import importDatas from "./routes/importDatasRouter";
 
 router.use("/buildCollab", buildCollab);
+router.use("/importDatas", importDatas);
 
 app.use("/api", router);
 
