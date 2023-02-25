@@ -25,9 +25,11 @@ const router = express.Router();
 
 import buildCollab from "./routes/buildCollabRouter";
 import importDatas from "./routes/importDatasRouter";
+import exportCorrections from "./routes/exportCorrectionsRouter";
 
 router.use("/buildCollab", buildCollab);
 router.use("/importDatas", importDatas);
+router.use("/exportCorrections", exportCorrections);
 
 app.use("/api", router);
 
