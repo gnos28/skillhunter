@@ -1,11 +1,10 @@
-import { sheets_v4 } from "googleapis";
-import { GaxiosResponse } from "googleapis-common";
-import { AddProtectedRangeProps, batchUpdate } from "./batchUpdate";
-import { TabListItem } from "./clearSheetRows";
-import { getSheetTabIds } from "./getSheetTabIds";
+import { AddProtectedRangeProps, batchUpdate } from "./appSheet/batchUpdate";
+import { getSheetTabIds } from "./appSheet/getSheetTabIds";
 import { appSheet } from "./google";
-import { importSheetData } from "./importSheetData";
-import { updateSheetRange } from "./updateSheetRange";
+import { importSheetData } from "./appSheet/importSheetData";
+import { updateSheetRange } from "./appSheet/updateSheetRange";
+import { clearTabData } from "./appSheet/clearSheetRows";
+import { TabListItem } from "../interfaces";
 
 type TabCache = {
   [key: string]: ({
@@ -36,6 +35,13 @@ type UpdateSheetRangeProps = {
   data: any[][];
 };
 
+type ClearTabDataProps = {
+  sheetId: string;
+  tabList: TabListItem[];
+  tabName: string;
+  headerRowIndex?: number;
+};
+
 let tabCache: TabCache = {};
 let tabIdsCache: TabIdsCache = {};
 let lastReadRequestTime: number | undefined = undefined;
@@ -56,8 +62,8 @@ const handleReadTryCatch = async <T>(
     res = await callback();
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
-  } catch (e) {
-    console.log("inside catch 💩", e);
+  } catch (e: any) {
+    console.log("inside catch 💩", e.message);
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
 
@@ -267,6 +273,19 @@ export const sheetAPI = {
 
     await handleWriteDelay(async () => {
       await batchUpdate.runProtectedRange(spreadsheetId);
+    });
+  },
+
+  clearTabData: async ({
+    sheetId,
+    tabList,
+    tabName,
+    headerRowIndex,
+  }: ClearTabDataProps) => {
+    console.log("*** sheetAPI.runBatchProtectedRange");
+
+    await handleWriteDelay(async () => {
+      await clearTabData(sheetId, tabList, tabName, headerRowIndex);
     });
   },
 };

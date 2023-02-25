@@ -1,5 +1,5 @@
 import { sheets_v4 } from "googleapis";
-import { appSheet } from "./google";
+import { appSheet } from "../google";
 
 export type AddProtectedRangeProps = {
   spreadsheetId: string;

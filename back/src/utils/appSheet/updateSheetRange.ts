@@ -1,5 +1,5 @@
 import AlphanumericEncoder from "alphanumeric-encoder";
-import { appSheet } from "./google";
+import { appSheet } from "../google";
 
 type UpdateSheetRange = {
   sheetId: string;

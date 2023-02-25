@@ -1,11 +1,7 @@
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import * as dotenv from "dotenv";
+import { TabListItem } from "../../interfaces";
 dotenv.config();
-
-export type TabListItem = {
-  sheetId: string;
-  sheetName: string;
-};
 
 export const clearSheetRows = async (
   sheetId: string,
