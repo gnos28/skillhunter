@@ -29,6 +29,9 @@ export const buildCollab = async ({
   folderId: argFolderId,
   trameId: argTrameId,
 }: BuildCollabProps) => {
+  // clear cache
+  sheetAPI.clearCache();
+
   let mainSpreadsheetId: string | undefined = undefined;
   let folderId: string | undefined = undefined;
   let trameId: string | undefined = undefined;
@@ -61,9 +64,6 @@ export const buildCollab = async ({
     actionName: "buildCollab",
     nbIncrement: 1,
   });
-
-  // clear cache
-  sheetAPI.clearCache();
 
   const driveApp = appDrive();
 

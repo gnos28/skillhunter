@@ -32,9 +32,9 @@ type ExportCorrectionsProps = {
 export const exportCorrections = async ({
   mainSpreadsheetId,
 }: ExportCorrectionsProps) => {
-  if (mainSpreadsheetId === undefined) throw new Error("missing id");
-
   sheetAPI.clearCache();
+
+  if (mainSpreadsheetId === undefined) throw new Error("missing id");
 
   await exportProgression.init({
     spreadsheetId: mainSpreadsheetId,

@@ -35,7 +35,7 @@ export const exportProgression = {
     nbIncrement = argNbIncrement || 1;
     incrementState = 0;
 
-    const dataToStore = [[actionName, 0, new Date().getTime()]];
+    const dataToStore = [[actionName, 0, new Date().toLocaleString("fr-FR")]];
 
     await sheetAPI.updateRange({
       sheetId: spreadsheetId,
@@ -50,17 +50,13 @@ export const exportProgression = {
   }: UpdateNbIncrementProps) => {
     actionName = argActionName;
     nbIncrement = argNbIncrement || 1;
-
-    const dataToStore = [
-      [actionName, incrementState / nbIncrement, new Date().getTime()],
-    ];
   },
   increment: async ({ actionName: argActionName }: IncrementProps) => {
     incrementState++;
 
     if (nbIncrement) {
       const dataToStore = [
-        [argActionName, incrementState / nbIncrement, new Date().getTime()],
+        [argActionName, incrementState / nbIncrement, new Date().toLocaleString("fr-FR")],
       ];
 
       await sheetAPI.updateRange({

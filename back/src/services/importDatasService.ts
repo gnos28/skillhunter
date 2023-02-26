@@ -40,6 +40,8 @@ export const importDatas = async ({
 }: ImportDatasProps) => {
   console.log("****** importDatas ******");
 
+  sheetAPI.clearCache();
+
   if (initProgress)
     await exportProgression.init({
       spreadsheetId: mainSpreadsheetId,
@@ -51,7 +53,6 @@ export const importDatas = async ({
   if (!argTabList) tabList = await sheetAPI.getTabIds(mainSpreadsheetId);
   else tabList = argTabList;
 
-  sheetAPI.clearCache();
   const driveApp = appDrive();
 
   const collabData = await sheetAPI.getTabData(
@@ -167,11 +168,14 @@ export const importDatas = async ({
             const filteredAllContratData = allContratData.filter(
               (contrat) => contrat[TAB_CONTRATS_COL_ID] === id
             );
+
+            let colIndex: number | undefined = undefined;
+
             if (filteredAllContratData.length)
               allContratLineIndex = filteredAllContratData[0].rowIndex;
 
-            const colIndex =
-              Object.keys(filteredAllContratData[0]).findIndex(
+            colIndex =
+              Object.keys(allContratData[0]).findIndex(
                 (col) => col === TAB_CONTRATS_COL_IMPORT_ID
               ) + 1;
 
@@ -196,8 +200,6 @@ export const importDatas = async ({
               const allContratIndex = allContratData.map(
                 (line) => line.rowIndex
               );
-
-              console.log("allContratIndex", allContratIndex);
 
               let emptyLineIndex: number | false = false; // recherche premiere ligne vide [sans ID]
               let indexToCheck = 3;
@@ -269,7 +271,7 @@ export const importDatas = async ({
       }
       if (initProgress)
         await exportProgression.increment({
-          actionName: "exportCorrections",
+          actionName: "importDatas",
         });
       else
         await exportProgression.increment({
