@@ -7,10 +7,8 @@ type Body = {
 export const storeBodyToFs = async (body: Body) => {
   console.log("storeBodyToFs", body);
 
-  const res = await fs.promises.writeFile(
+  await fs.promises.writeFile(
     "stored-files/lastReqBody.json",
     JSON.stringify(body)
   );
-
-  console.log("res", res);
 };

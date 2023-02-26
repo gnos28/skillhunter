@@ -79,6 +79,8 @@ export const handleContratUpdate = async ({
       );
     });
 
+  // if (collabName === "LEA ROUSSEL") console.log("values", values);
+
   const spreadsheetsData = await sheetAPI.getTabMetaData({
     spreadsheetId: collabFileId,
     fields: "*",
@@ -91,12 +93,16 @@ export const handleContratUpdate = async ({
 
   const nbRows = sheetData && sheetData[0].properties?.gridProperties?.rowCount;
 
+  // if (collabName === "LEA ROUSSEL") console.log("nbRows", nbRows);
+
   if (nbRows) {
     const fullValues = Array(nbRows - 1)
       .fill(undefined)
       .map(
         (_, rowIndex) => values[rowIndex] || Array(values[0].length).fill("")
       );
+
+    // if (collabName === "LEA ROUSSEL") console.log("fullValues", fullValues);
 
     const contratsCollabIndex = COL2KEEP_CONTRATS.findIndex(
       (val) => val === TAB_CONTRATS_COL_COLLAB
@@ -106,11 +112,15 @@ export const handleContratUpdate = async ({
       (val) => val === TAB_CONTRATS_COL_ID
     );
 
+    // if (collabName === "LEA ROUSSEL")
+    //   console.log("contratsIdIndex", contratsIdIndex);
+
     // pré-remplir colonne "réalisé par"
     for (let i = 0; i < fullValues.length; i++)
       fullValues[i][contratsCollabIndex] = collabName;
 
-    console.log("contratsByCollabValues", contratsByCollabValues);
+    // if (collabName === "LEA ROUSSEL")
+    //   console.log("contratsByCollabValues", contratsByCollabValues);
 
     // générer les IDs de contrat
     const idList: string[] = [];
@@ -118,7 +128,7 @@ export const handleContratUpdate = async ({
       if (line[TAB_CONTRATS_COL_ID]) idList.push(line[contratsIdIndex]);
     });
 
-    console.log("idList", idList);
+    // if (collabName === "LEA ROUSSEL") console.log("idList", idList);
 
     for (let i = 0; i < fullValues.length; i++)
       if (!fullValues[i][contratsIdIndex]) {
@@ -134,7 +144,13 @@ export const handleContratUpdate = async ({
         idList.push(newId);
 
         fullValues[i][contratsIdIndex] = newId;
-      }
+      } else idList.push(fullValues[i][contratsIdIndex]);
+
+    // if (collabName === "LEA ROUSSEL")
+    //   console.log(
+    //     "fullValues",
+    //     fullValues.map((val) => val[contratsIdIndex])
+    //   );
 
     // contratsByCollabRange.setValues(contratsByCollabValues);
     // contratsByCollabRange.setDataValidations(dataValidationRules); // remettre data validation

@@ -291,7 +291,7 @@ export const sheetAPI = {
     tabName,
     headerRowIndex,
   }: ClearTabDataProps) => {
-    console.log("*** sheetAPI.runBatchProtectedRange");
+    console.log("*** sheetAPI.clearTabData");
 
     await handleWriteDelay(async () => {
       await clearTabData(sheetId, tabList, tabName, headerRowIndex);

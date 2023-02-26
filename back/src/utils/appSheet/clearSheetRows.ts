@@ -26,7 +26,7 @@ export const clearSheetRows = async (
 
     const sheet = doc.sheetsById[tabId];
 
-    if (headerRowIndex) sheet.loadHeaderRow(headerRowIndex);
+    if (headerRowIndex) await sheet.loadHeaderRow(headerRowIndex);
 
     await sheet.clearRows();
   }
