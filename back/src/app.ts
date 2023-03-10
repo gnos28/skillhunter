@@ -27,13 +27,15 @@ app.use(express.json());
 // CRUD API routes
 const router = express.Router();
 
-import buildCollab from "./routes/buildCollabRouter";
-import importDatas from "./routes/importDatasRouter";
-import exportCorrections from "./routes/exportCorrectionsRouter";
+import buildCollabRouter from "./routes/buildCollabRouter";
+import importDatasRouter from "./routes/importDatasRouter";
+import exportCorrectionsRouter from "./routes/exportCorrectionsRouter";
+import initVariablesRouter from "./routes/initVariablesRouter";
 
-router.use("/buildCollab", buildCollab);
-router.use("/importDatas", importDatas);
-router.use("/exportCorrections", exportCorrections);
+router.use("/buildCollab", buildCollabRouter);
+router.use("/importDatas", importDatasRouter);
+router.use("/exportCorrections", exportCorrectionsRouter);
+router.use("/init", initVariablesRouter);
 
 app.use("/api", router);
 
