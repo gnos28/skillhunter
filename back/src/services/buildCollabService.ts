@@ -29,143 +29,147 @@ export const buildCollab = async ({
   folderId: argFolderId,
   trameId: argTrameId,
 }: BuildCollabProps) => {
-  // clear cache
-  sheetAPI.clearCache();
+  try {
+    // clear cache
+    sheetAPI.clearCache();
 
-  let mainSpreadsheetId: string | undefined = undefined;
-  let folderId: string | undefined = undefined;
-  let trameId: string | undefined = undefined;
+    let mainSpreadsheetId: string | undefined = undefined;
+    let folderId: string | undefined = undefined;
+    let trameId: string | undefined = undefined;
 
-  if (
-    argMainSpreadsheetId === undefined ||
-    argFolderId === undefined ||
-    argTrameId === undefined
-  ) {
-    const storedFile = await getBodyFromFs();
+    if (
+      argMainSpreadsheetId === undefined ||
+      argFolderId === undefined ||
+      argTrameId === undefined
+    ) {
+      const storedFile = await getBodyFromFs();
 
-    mainSpreadsheetId = storedFile.mainSpreadsheetId;
-    folderId = storedFile.folderId;
-    trameId = storedFile.trameId;
-  } else {
-    mainSpreadsheetId = argMainSpreadsheetId;
-    folderId = argFolderId;
-    trameId = argTrameId;
-  }
-
-  if (
-    mainSpreadsheetId === undefined ||
-    folderId === undefined ||
-    trameId === undefined
-  )
-    throw new Error("missing id");
-
-  await exportProgression.init({
-    spreadsheetId: mainSpreadsheetId,
-    actionName: "buildCollab",
-    nbIncrement: 1,
-  });
-
-  const driveApp = appDrive();
-
-  const tabList = await sheetAPI.getTabIds(mainSpreadsheetId);
-
-  const collabData = await sheetAPI.getTabData(
-    mainSpreadsheetId,
-    tabList,
-    TAB_NAME_COLLAB
-  );
-
-  // vérifier existence du fichier collaborateur
-  let nbCreatedFiles = 0;
-  let lineIndex = 2;
-
-  const nbCollab = collabData.reduce(
-    (acc, val) => (val[TAB_COLLAB_COL_COLLAB] ? acc + 1 : acc),
-    0
-  );
-  exportProgression.updateNbIncrement({
-    actionName: "buildCollab",
-    nbIncrement: nbCollab * 2 + 2,
-  });
-  await exportProgression.increment({
-    actionName: "buildCollab",
-  });
-
-  for await (const line of collabData) {
-    const collabName = line[TAB_COLLAB_COL_COLLAB];
-    const collabEmail = line[TAB_COLLAB_COL_EMAIL];
-    let collabId = line[TAB_COLLAB_COL_SHEET_ID];
-
-    if (collabName && collabEmail) {
-      let sheetFound = false;
-      let collabSheet = null;
-
-      if (collabId) {
-        // try {
-        // console.log({ collabName, collabEmail, collabId });
-        const fileInfo = await driveApp.files.get({
-          fileId: collabId,
-          fields: "*",
-        });
-
-        const isTrashed = fileInfo.data.trashed;
-
-        // console.log(collabName, "fileInfo", fileInfo.data);
-
-        //   collabSheet = SpreadsheetApp.openById(collabId);
-        // const isTrashed = DriveApp.getFileById(collabId).isTrashed();
-        if (!isTrashed) {
-          sheetFound = true;
-          console.log(`sheet ${collabName} found 😀`);
-        } else console.log(`sheet ${collabName} is trashed 🗑️`);
-        // } catch {
-        //   console.log(`sheet ${collabName} not found 😱`);
-        // }
-      }
-
-      if (!sheetFound) {
-        console.log(`sheet ${collabName} not found 😱`);
-        // si existe pas >> créer le fichier
-        collabId = await createNewSheet({
-          collabName,
-          collabEmail,
-          mainSpreadsheetId,
-          trameId,
-          folderId,
-          tabList,
-        });
-        console.log("collabId", collabId);
-
-        await sheetAPI.updateRange({
-          sheetId: mainSpreadsheetId,
-          tabName: TAB_NAME_COLLAB,
-          startCoords: [lineIndex, 4],
-          data: [[collabId]],
-        });
-
-        // collabData[lineIndex][3] = collabId;
-        // collabListRange.setValues(collabData);
-        nbCreatedFiles++;
-      } // si existe >> mettre à jour data
-      else
-        await updateWholeDatas({
-          collabName,
-          tabList,
-          collabFileId: collabId,
-          mainSpreadsheetId,
-          forceContratUpdate: false,
-        });
-
-      await exportProgression.increment({
-        actionName: "buildCollab",
-      });
+      mainSpreadsheetId = storedFile.mainSpreadsheetId;
+      folderId = storedFile.folderId;
+      trameId = storedFile.trameId;
+    } else {
+      mainSpreadsheetId = argMainSpreadsheetId;
+      folderId = argFolderId;
+      trameId = argTrameId;
     }
-    lineIndex++;
+
+    if (
+      mainSpreadsheetId === undefined ||
+      folderId === undefined ||
+      trameId === undefined
+    )
+      throw new Error("missing id");
+
+    await exportProgression.init({
+      spreadsheetId: mainSpreadsheetId,
+      actionName: "buildCollab",
+      nbIncrement: 1,
+    });
+
+    const driveApp = appDrive();
+
+    const tabList = await sheetAPI.getTabIds(mainSpreadsheetId);
+
+    const collabData = await sheetAPI.getTabData(
+      mainSpreadsheetId,
+      tabList,
+      TAB_NAME_COLLAB
+    );
+
+    // vérifier existence du fichier collaborateur
+    let nbCreatedFiles = 0;
+    let lineIndex = 2;
+
+    const nbCollab = collabData.reduce(
+      (acc, val) => (val[TAB_COLLAB_COL_COLLAB] ? acc + 1 : acc),
+      0
+    );
+    exportProgression.updateNbIncrement({
+      actionName: "buildCollab",
+      nbIncrement: nbCollab * 2 + 2,
+    });
+    await exportProgression.increment({
+      actionName: "buildCollab",
+    });
+
+    for await (const line of collabData) {
+      const collabName = line[TAB_COLLAB_COL_COLLAB];
+      const collabEmail = line[TAB_COLLAB_COL_EMAIL];
+      let collabId = line[TAB_COLLAB_COL_SHEET_ID];
+
+      if (collabName && collabEmail) {
+        let sheetFound = false;
+        let collabSheet = null;
+
+        if (collabId) {
+          // try {
+          // console.log({ collabName, collabEmail, collabId });
+          const fileInfo = await driveApp.files.get({
+            fileId: collabId,
+            fields: "*",
+          });
+
+          const isTrashed = fileInfo.data.trashed;
+
+          // console.log(collabName, "fileInfo", fileInfo.data);
+
+          //   collabSheet = SpreadsheetApp.openById(collabId);
+          // const isTrashed = DriveApp.getFileById(collabId).isTrashed();
+          if (!isTrashed) {
+            sheetFound = true;
+            console.log(`sheet ${collabName} found 😀`);
+          } else console.log(`sheet ${collabName} is trashed 🗑️`);
+          // } catch {
+          //   console.log(`sheet ${collabName} not found 😱`);
+          // }
+        }
+
+        if (!sheetFound) {
+          console.log(`sheet ${collabName} not found 😱`);
+          // si existe pas >> créer le fichier
+          collabId = await createNewSheet({
+            collabName,
+            collabEmail,
+            mainSpreadsheetId,
+            trameId,
+            folderId,
+            tabList,
+          });
+          console.log("collabId", collabId);
+
+          await sheetAPI.updateRange({
+            sheetId: mainSpreadsheetId,
+            tabName: TAB_NAME_COLLAB,
+            startCoords: [lineIndex, 4],
+            data: [[collabId]],
+          });
+
+          // collabData[lineIndex][3] = collabId;
+          // collabListRange.setValues(collabData);
+          nbCreatedFiles++;
+        } // si existe >> mettre à jour data
+        else
+          await updateWholeDatas({
+            collabName,
+            tabList,
+            collabFileId: collabId,
+            mainSpreadsheetId,
+            forceContratUpdate: false,
+          });
+
+        await exportProgression.increment({
+          actionName: "buildCollab",
+        });
+      }
+      lineIndex++;
+    }
+
+    await importDatas({ emailAlert: true, mainSpreadsheetId, tabList });
+
+    console.log("****** END OF buildCollab FUNCTION ******");
+
+    return collabData;
+  } catch (error: any) {
+    console.error(error.message);
   }
-
-  await importDatas({ emailAlert: true, mainSpreadsheetId, tabList });
-
-  console.log("****** END OF buildCollab FUNCTION ******");
-
-  return collabData;
 };
