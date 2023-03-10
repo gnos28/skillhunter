@@ -58,23 +58,31 @@ export const createNewSheet = async ({
       TAB_NAME_PARAMETRES
     );
 
-    // donner accès
-    await driveApp.permissions.create({
-      fileId,
-      requestBody: { role: "writer", type: "user", emailAddress: collabEmail },
-      sendNotificationEmail: false,
-    });
-
-    for await (const params of paramsData) {
+    try {
+      // donner accès
       await driveApp.permissions.create({
         fileId,
         requestBody: {
           role: "writer",
           type: "user",
-          emailAddress: params[TAB_PARAMETRES_COL_EMAIL],
+          emailAddress: collabEmail,
         },
         sendNotificationEmail: false,
       });
+    } catch (error: any) {
+      console.log(error.message);
+    } finally {
+      for await (const params of paramsData) {
+        await driveApp.permissions.create({
+          fileId,
+          requestBody: {
+            role: "writer",
+            type: "user",
+            emailAddress: params[TAB_PARAMETRES_COL_EMAIL],
+          },
+          sendNotificationEmail: false,
+        });
+      }
     }
   }
 
