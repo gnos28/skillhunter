@@ -103,5 +103,5 @@ export const lockContrat = async ({
   }
 
   // run batch
-  await sheetAPI.runBatchProtectedRange(collabSheetId);
+  // await sheetAPI.runBatchProtectedRange(collabSheetId); // disabled because very slow
 };
