@@ -56,14 +56,16 @@ export const batchUpdate = {
 
     const requests = protectedRangeBatchBuffer[spreadsheetId];
     if (requests) {
-      console.log("requests count : ", requests.length);
+      console.log("[runProtectedRange] requests count : ", requests.length);
       // console.log("requests", requests);
+      const startTime = new Date().getTime()
       await sheetApp.spreadsheets.batchUpdate({
         spreadsheetId,
         requestBody: {
           requests,
         },
       });
+      console.log("[runProtectedRange] time taken (ms) : ", new Date().getTime() - startTime)
       protectedRangeBatchBuffer[spreadsheetId] = [];
     }
   },
