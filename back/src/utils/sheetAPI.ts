@@ -51,8 +51,8 @@ let nbInQueueWrite = 0;
 let readCatchCount = 0;
 let writeCatchCount = 0;
 
-const DELAY = 200; // in ms
-const CATCH_DELAY_MULTIPLIER = 10;
+const DELAY = 300; // in ms
+const CATCH_DELAY_MULTIPLIER = 15;
 const MAX_CATCH_COUNT = 60;
 
 const handleReadTryCatch = async <T>(
