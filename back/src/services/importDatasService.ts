@@ -283,7 +283,28 @@ export const importDatas = async ({
 
     // run lockContratBatch ici
     // run batch
-    if (nbContratsFound > 0) sheetAPI.runBatchProtectedRange(collabId); // volontary missing await here
+    if (nbContratsFound > 0) {
+      console.log("nbContratsFound > 0 🥶🥶🥶");
+      
+      const sheetId = parseInt(
+        (await sheetAPI.getTabIds(collabId)).filter(
+          (tabId) => tabId.sheetName === TAB_NAME_CONTRATS
+        )[0].sheetId,
+        10
+      );
+
+      const protectedRangeIds = await sheetAPI.getProtectedRangeIds({
+        spreadsheetId: collabId,
+        sheetId,
+      });
+
+      await sheetAPI.deleteProtectedRange({
+        spreadsheetId: collabId,
+        protectedRangeIds,
+      });
+
+      sheetAPI.runBatchProtectedRange(collabId); // volontary missing await here
+    }
   }
   console.log("****** END OF importDatas FUNCTION ******");
 };

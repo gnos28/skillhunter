@@ -35,6 +35,16 @@ type UpdateSheetRangeProps = {
   data: any[][];
 };
 
+type GetProtectedRangeIdsProps = {
+  spreadsheetId: string;
+  sheetId: number;
+};
+
+type DeleteProtectedRangeProps = {
+  spreadsheetId: string;
+  protectedRangeIds: number[];
+};
+
 type ClearTabDataProps = {
   sheetId: string;
   tabList: TabListItem[];
@@ -253,6 +263,20 @@ export const sheetAPI = {
         data,
       });
     });
+  },
+
+  getProtectedRangeIds: async ({
+    spreadsheetId,
+    sheetId,
+  }: GetProtectedRangeIdsProps) => {
+    return await batchUpdate.getProtectedRangeIds(spreadsheetId, sheetId);
+  },
+
+  deleteProtectedRange: async ({
+    spreadsheetId,
+    protectedRangeIds,
+  }: DeleteProtectedRangeProps) => {
+    await batchUpdate.deleteProtectedRange(spreadsheetId, protectedRangeIds);
   },
 
   addBatchProtectedRange: ({

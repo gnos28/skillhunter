@@ -23,4 +23,15 @@ buildCollabController.buildCollab = async (req, res) => {
   }
 };
 
+buildCollabController.buildCollabNoParams = async (_req, res) => {
+  try {
+    buildCollab({});
+
+    res.send("processing request");
+  } catch (err: unknown) {
+    console.error(err);
+    res.sendStatus(500);
+  }
+};
+
 export default buildCollabController;
