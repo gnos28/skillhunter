@@ -104,6 +104,7 @@ export const importDatas = async ({
     const collabName = collabLine[TAB_COLLAB_COL_COLLAB];
     const collabEmail = collabLine[TAB_COLLAB_COL_EMAIL];
     let collabId = collabLine[TAB_COLLAB_COL_SHEET_ID];
+    let nbContratsFound = 0;
 
     if (collabName && collabEmail) {
       let sheetFound = false;
@@ -160,6 +161,7 @@ export const importDatas = async ({
             salaire &&
             percent
           ) {
+            nbContratsFound++;
             console.log("contrat found !", id);
             // si contrat correctement rempli
             // rechercher contrat dans fichier chapeau
@@ -278,6 +280,10 @@ export const importDatas = async ({
           actionName: "buildCollab",
         });
     }
+
+    // run lockContratBatch ici
+    // run batch
+    if (nbContratsFound > 0) sheetAPI.runBatchProtectedRange(collabId); // volontary missing await here
   }
   console.log("****** END OF importDatas FUNCTION ******");
 };
