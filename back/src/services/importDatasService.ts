@@ -19,7 +19,7 @@ import {
   TAB_CONTRATS_COL_IMPORT_ID,
   COL2KEEP_CONTRATS,
 } from "../interfaces/const";
-import { appDrive, appGmail } from "../utils/google";
+import { appDrive } from "../utils/google";
 import { mapTrimObj } from "../utils/mapTrimObj";
 import { sheetAPI } from "../utils/sheetAPI";
 import { exportProgression } from "./exportProgression";
@@ -227,7 +227,7 @@ export const importDatas = async ({
 
               // envoyer un email au owner du chapeau
               if (emailAlert) {
-                const gMailApp = appGmail();
+                // const gMailApp = appGmail();
 
                 const dateDebutDate = new Date(dateDebut);
 
