@@ -76,7 +76,7 @@ const handleReadTryCatch = async <T>(
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
   } catch (e: any) {
-    console.log(`inside catch 💩 #${readCatchCount}`, e.message);
+    console.log(`inside catch 💩 READ#${readCatchCount}`, callback.name, e.message);
     readCatchCount++;
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
@@ -102,6 +102,7 @@ const handleReadDelay = async <T>(
   ) {
     console.log(
       "*** force DELAY [READ] ",
+      callback.name,
       nbInQueueRead,
       lastReadRequestTime
         ? lastReadRequestTime + DELAY * nbInQueueRead - currentTime
@@ -133,7 +134,11 @@ const handleWriteTryCatch = async <T>(
     lastWriteRequestTime = new Date().getTime();
     nbInQueueWrite -= delayMultiplier || 1;
   } catch (e: any) {
-    console.log(`inside catch 💩 #${writeCatchCount}`, e.message);
+    console.log(
+      `inside catch 💩 WRITE#${writeCatchCount}`,
+      callback.name,
+      e.message
+    );
     writeCatchCount++;
     lastWriteRequestTime = new Date().getTime();
     nbInQueueWrite -= delayMultiplier || 1;
@@ -159,6 +164,7 @@ const handleWriteDelay = async <T>(
   ) {
     console.log(
       "*** force DELAY [WRITE]",
+      callback.name,
       nbInQueueWrite,
       lastWriteRequestTime
         ? lastWriteRequestTime + DELAY * nbInQueueWrite - currentTime
