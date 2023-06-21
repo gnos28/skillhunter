@@ -32,6 +32,7 @@ export const buildCollab = async ({
   try {
     // clear cache
     sheetAPI.clearCache();
+    sheetAPI.logBatchProtectedRange();
 
     let mainSpreadsheetId: string | undefined = undefined;
     let folderId: string | undefined = undefined;

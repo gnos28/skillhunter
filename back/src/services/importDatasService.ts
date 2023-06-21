@@ -285,7 +285,7 @@ export const importDatas = async ({
     // run batch
     if (nbContratsFound > 0) {
       console.log("nbContratsFound > 0 🥶🥶🥶");
-      
+
       const sheetId = parseInt(
         (await sheetAPI.getTabIds(collabId)).filter(
           (tabId) => tabId.sheetName === TAB_NAME_CONTRATS
@@ -303,6 +303,7 @@ export const importDatas = async ({
         protectedRangeIds,
       });
 
+      sheetAPI.logBatchProtectedRange();
       sheetAPI.runBatchProtectedRange(collabId); // volontary missing await here
     }
   }

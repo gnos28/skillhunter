@@ -51,6 +51,10 @@ export const batchUpdate = {
     });
   },
 
+  getBatchProtectedRange: () => {
+    return protectedRangeBatchBuffer;
+  },
+
   runProtectedRange: async (spreadsheetId: string) => {
     const sheetApp = appSheet();
 

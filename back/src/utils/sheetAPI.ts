@@ -76,7 +76,11 @@ const handleReadTryCatch = async <T>(
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
   } catch (e: any) {
-    console.log(`inside catch 💩 READ#${readCatchCount}`, callback.name, e.message);
+    console.log(
+      `inside catch 💩 READ#${readCatchCount}`,
+      callback.name,
+      e.message
+    );
     readCatchCount++;
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
@@ -283,6 +287,18 @@ export const sheetAPI = {
     protectedRangeIds,
   }: DeleteProtectedRangeProps) => {
     await batchUpdate.deleteProtectedRange(spreadsheetId, protectedRangeIds);
+  },
+
+  logBatchProtectedRange: () => {
+    const batchProtectedRange = batchUpdate.getBatchProtectedRange();
+
+    console.log("%%%%% logBatchProtectedRange");
+
+    Object.keys(batchProtectedRange).forEach((key) => {
+      console.log(key, batchProtectedRange[key].length);
+    });
+
+    console.log("%%%%% logBatchProtectedRange");
   },
 
   addBatchProtectedRange: ({
