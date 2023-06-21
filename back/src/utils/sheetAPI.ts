@@ -104,14 +104,12 @@ const handleReadDelay = async <T>(
     lastReadRequestTime &&
     currentTime < lastReadRequestTime + DELAY * nbInQueueRead
   ) {
-    console.log(
-      "*** force DELAY [READ] ",
-      callback.name,
+    console.log("*** force DELAY [READ] ", {
       nbInQueueRead,
-      lastReadRequestTime
+      timeout: lastReadRequestTime
         ? lastReadRequestTime + DELAY * nbInQueueRead - currentTime
-        : 0
-    );
+        : 0,
+    });
     await new Promise((resolve) =>
       setTimeout(
         () => resolve(null),
@@ -166,14 +164,12 @@ const handleWriteDelay = async <T>(
     lastWriteRequestTime &&
     currentTime < lastWriteRequestTime + DELAY * nbInQueueWrite
   ) {
-    console.log(
-      "*** force DELAY [WRITE]",
-      callback.name,
+    console.log("*** force DELAY [WRITE]", {
       nbInQueueWrite,
-      lastWriteRequestTime
+      timeout: lastWriteRequestTime
         ? lastWriteRequestTime + DELAY * nbInQueueWrite - currentTime
-        : 0
-    );
+        : 0,
+    });
     await new Promise((resolve) =>
       setTimeout(
         () => resolve(null),
@@ -279,7 +275,9 @@ export const sheetAPI = {
     spreadsheetId,
     sheetId,
   }: GetProtectedRangeIdsProps) => {
-    return await batchUpdate.getProtectedRangeIds(spreadsheetId, sheetId);
+    return await handleReadDelay(async () => {
+      return await batchUpdate.getProtectedRangeIds(spreadsheetId, sheetId);
+    });
   },
 
   deleteProtectedRange: async ({
