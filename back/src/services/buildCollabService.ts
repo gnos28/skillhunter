@@ -24,12 +24,19 @@ type BuildCollabProps = {
   trameId?: string | undefined;
 };
 
+let buildCollabRunning = false;
+
 export const buildCollab = async ({
   mainSpreadsheetId: argMainSpreadsheetId,
   folderId: argFolderId,
   trameId: argTrameId,
 }: BuildCollabProps) => {
+  if (buildCollabRunning === true) {
+    console.log("💥 buildCollab already running 💥");
+    return;
+  }
   try {
+    buildCollabRunning = true;
     // clear cache
     sheetAPI.clearCache();
     sheetAPI.logBatchProtectedRange();
@@ -169,8 +176,10 @@ export const buildCollab = async ({
 
     console.log("****** END OF buildCollab FUNCTION ******");
 
+    buildCollabRunning = false;
     return collabData;
   } catch (error: any) {
     console.error(error.message);
+    buildCollabRunning = false;
   }
 };

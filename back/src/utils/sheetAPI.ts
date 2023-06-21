@@ -105,7 +105,7 @@ const handleReadDelay = async <T>(
     currentTime < lastReadRequestTime + DELAY * nbInQueueRead
   ) {
     console.log("*** force DELAY [READ] ", {
-      nbInQueueRead,
+      nbInQueueRead:nbInQueueRead / (delayMultiplier || 1),
       timeout: lastReadRequestTime
         ? lastReadRequestTime + DELAY * nbInQueueRead - currentTime
         : 0,
@@ -165,7 +165,7 @@ const handleWriteDelay = async <T>(
     currentTime < lastWriteRequestTime + DELAY * nbInQueueWrite
   ) {
     console.log("*** force DELAY [WRITE]", {
-      nbInQueueWrite,
+      nbInQueueWrite:nbInQueueWrite / (delayMultiplier || 1),
       timeout: lastWriteRequestTime
         ? lastWriteRequestTime + DELAY * nbInQueueWrite - currentTime
         : 0,

@@ -32,12 +32,20 @@ type ImportDatasProps = {
   initProgress?: boolean;
 };
 
+let importDatasRunning = false;
+
 export const importDatas = async ({
   emailAlert = true,
   mainSpreadsheetId,
   tabList: argTabList,
   initProgress = false,
 }: ImportDatasProps) => {
+  if (importDatasRunning === true) {
+    console.log("💥 importDatas already running 💥");
+    return;
+  }
+  importDatasRunning = true;
+
   console.log("****** importDatas ******");
 
   sheetAPI.clearCache();
@@ -307,5 +315,6 @@ export const importDatas = async ({
       sheetAPI.runBatchProtectedRange(collabId); // volontary missing await here
     }
   }
+  importDatasRunning = false;
   console.log("****** END OF importDatas FUNCTION ******");
 };
