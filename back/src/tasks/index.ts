@@ -8,9 +8,10 @@ const initScheduledJobs = () => {
 
   const every2hour = "0 */2 * * *";
   const every30min = "*/30 * * * *";
+  const every10min = "*/10 * * * *";
   const every2min = "*/2 * * * *";
 
-  const cronBuildCollab = CronJob.schedule(every30min, () => {
+  const cronBuildCollab = CronJob.schedule(every10min, () => {
     console.log("⏰⏰⏰ launching scheduled task buildCollab");
     buildCollab({});
   });
