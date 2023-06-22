@@ -105,7 +105,7 @@ const handleReadDelay = async <T>(
     currentTime < lastReadRequestTime + DELAY * nbInQueueRead
   ) {
     console.log("*** force DELAY [READ] ", {
-      nbInQueueRead:nbInQueueRead / (delayMultiplier || 1),
+      nbInQueueRead: nbInQueueRead / (delayMultiplier || 1),
       timeout: lastReadRequestTime
         ? lastReadRequestTime + DELAY * nbInQueueRead - currentTime
         : 0,
@@ -165,7 +165,7 @@ const handleWriteDelay = async <T>(
     currentTime < lastWriteRequestTime + DELAY * nbInQueueWrite
   ) {
     console.log("*** force DELAY [WRITE]", {
-      nbInQueueWrite:nbInQueueWrite / (delayMultiplier || 1),
+      nbInQueueWrite: nbInQueueWrite / (delayMultiplier || 1),
       timeout: lastWriteRequestTime
         ? lastWriteRequestTime + DELAY * nbInQueueWrite - currentTime
         : 0,
@@ -284,7 +284,9 @@ export const sheetAPI = {
     spreadsheetId,
     protectedRangeIds,
   }: DeleteProtectedRangeProps) => {
-    await batchUpdate.deleteProtectedRange(spreadsheetId, protectedRangeIds);
+    await handleWriteDelay(async () => {
+      await batchUpdate.deleteProtectedRange(spreadsheetId, protectedRangeIds);
+    });
   },
 
   logBatchProtectedRange: () => {
