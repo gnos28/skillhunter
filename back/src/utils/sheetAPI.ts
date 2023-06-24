@@ -301,6 +301,10 @@ export const sheetAPI = {
     console.log("%%%%% logBatchProtectedRange");
   },
 
+  clearProtectedRangeBuffer: () => {
+    batchUpdate.clearBuffer();
+  },
+
   addBatchProtectedRange: ({
     spreadsheetId,
     editors,

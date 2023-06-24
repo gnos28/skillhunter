@@ -172,7 +172,7 @@ export const importDatas = async ({
               percent
             ) {
               nbContratsFound++;
-              console.log("contrat found !", id);
+              // console.log("contrat found !", id);
               // si contrat correctement rempli
               // rechercher contrat dans fichier chapeau
               let allContratLineIndex: number | undefined = undefined;
@@ -197,7 +197,7 @@ export const importDatas = async ({
 
               // si trouvé > mettre à jour les datas dans chapeau
               if (allContratLineIndex) {
-                console.log("update data line ", allContratLineIndex);
+                // console.log("update data line ", allContratLineIndex);
 
                 await sheetAPI.updateRange({
                   sheetId: mainSpreadsheetId,

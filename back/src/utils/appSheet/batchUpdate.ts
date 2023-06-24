@@ -51,6 +51,12 @@ export const batchUpdate = {
     });
   },
 
+  clearBuffer: () => {
+    Object.keys(protectedRangeBatchBuffer).forEach((key) => {
+      protectedRangeBatchBuffer[key] = [];
+    });
+  },
+
   getBatchProtectedRange: () => {
     return protectedRangeBatchBuffer;
   },

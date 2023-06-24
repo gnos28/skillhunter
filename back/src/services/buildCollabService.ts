@@ -39,6 +39,7 @@ export const buildCollab = async ({
     buildCollabRunning = true;
     // clear cache
     sheetAPI.clearCache();
+    sheetAPI.clearProtectedRangeBuffer();
     sheetAPI.logBatchProtectedRange();
 
     let mainSpreadsheetId: string | undefined = undefined;
