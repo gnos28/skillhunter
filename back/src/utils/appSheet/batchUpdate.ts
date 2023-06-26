@@ -65,7 +65,7 @@ export const batchUpdate = {
     const sheetApp = appSheet();
 
     const requests = protectedRangeBatchBuffer[spreadsheetId];
-    if (requests) {
+    if (requests.length > 0) {
       console.log("[runProtectedRange] requests count : ", requests.length);
       // console.log("requests", requests);
       const startTime = new Date().getTime();
