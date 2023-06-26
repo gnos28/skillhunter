@@ -63,7 +63,8 @@ let writeCatchCount = 0;
 
 const DELAY = 300; // in ms
 const CATCH_DELAY_MULTIPLIER = 15;
-const MAX_CATCH_COUNT = 60;
+const MAX_CATCH_COUNT = 30;
+const MAX_AWAITING_TIME = 120_000;
 
 const handleReadTryCatch = async <T>(
   callback: () => Promise<T>,
@@ -72,7 +73,14 @@ const handleReadTryCatch = async <T>(
   let res: T | undefined = undefined;
 
   try {
+    const timeout = setTimeout(() => {
+      console.log("[READ] MAX_AWAITING_TIME reached 💀");
+      throw new Error();
+    }, MAX_AWAITING_TIME);
+
     res = await callback();
+
+    clearTimeout(timeout);
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
   } catch (e: any) {
@@ -132,7 +140,14 @@ const handleWriteTryCatch = async <T>(
   let res: T | undefined = undefined;
 
   try {
+    const timeout = setTimeout(() => {
+      console.log("[READ] MAX_AWAITING_TIME reached 💀");
+      throw new Error();
+    }, MAX_AWAITING_TIME);
+
     res = await callback();
+
+    clearTimeout(timeout);
     lastWriteRequestTime = new Date().getTime();
     nbInQueueWrite -= delayMultiplier || 1;
   } catch (e: any) {
