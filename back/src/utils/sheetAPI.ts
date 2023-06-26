@@ -71,9 +71,10 @@ const handleReadTryCatch = async <T>(
   delayMultiplier?: number
 ) => {
   let res: T | undefined = undefined;
+  let timeout: NodeJS.Timeout | undefined = undefined;
 
   try {
-    const timeout = setTimeout(() => {
+    timeout = setTimeout(() => {
       console.log("[READ] MAX_AWAITING_TIME reached 💀");
       throw new Error();
     }, MAX_AWAITING_TIME);
@@ -92,6 +93,7 @@ const handleReadTryCatch = async <T>(
     readCatchCount++;
     lastReadRequestTime = new Date().getTime();
     nbInQueueRead -= delayMultiplier || 1;
+    clearTimeout(timeout);
 
     if (readCatchCount < MAX_CATCH_COUNT)
       res = await handleReadDelay(callback, CATCH_DELAY_MULTIPLIER);
@@ -138,9 +140,10 @@ const handleWriteTryCatch = async <T>(
   delayMultiplier?: number
 ) => {
   let res: T | undefined = undefined;
+  let timeout: NodeJS.Timeout | undefined = undefined;
 
   try {
-    const timeout = setTimeout(() => {
+    timeout = setTimeout(() => {
       console.log("[READ] MAX_AWAITING_TIME reached 💀");
       throw new Error();
     }, MAX_AWAITING_TIME);
@@ -159,6 +162,7 @@ const handleWriteTryCatch = async <T>(
     writeCatchCount++;
     lastWriteRequestTime = new Date().getTime();
     nbInQueueWrite -= delayMultiplier || 1;
+    clearTimeout(timeout);
 
     if (writeCatchCount < MAX_CATCH_COUNT)
       res = await handleWriteDelay(callback, CATCH_DELAY_MULTIPLIER);
