@@ -66,7 +66,11 @@ export const batchUpdate = {
 
     const requests = protectedRangeBatchBuffer[spreadsheetId];
     if (requests.length > 0) {
-      console.log("[runProtectedRange] requests count : ", requests.length);
+      console.log(
+        spreadsheetId.substring(0, 8),
+        "[runProtectedRange] requests count : ",
+        requests.length
+      );
       // console.log("requests", requests);
       const startTime = new Date().getTime();
       await sheetApp.spreadsheets.batchUpdate({
@@ -76,6 +80,7 @@ export const batchUpdate = {
         },
       });
       console.log(
+        spreadsheetId.substring(0, 8),
         "[runProtectedRange] time taken (ms) : ",
         new Date().getTime() - startTime
       );
@@ -117,7 +122,11 @@ export const batchUpdate = {
         deleteProtectedRange: { protectedRangeId },
       })
     );
-    console.log("[deleteProtectedRange] requests count : ", requests.length);
+    console.log(
+      spreadsheetId.substring(0, 8),
+      "[deleteProtectedRange] requests count : ",
+      requests.length
+    );
     // console.log("requests", requests);
     const startTime = new Date().getTime();
 
@@ -129,6 +138,7 @@ export const batchUpdate = {
     });
 
     console.log(
+      spreadsheetId.substring(0, 8),
       "[deleteProtectedRange] time taken (ms) : ",
       new Date().getTime() - startTime
     );
