@@ -314,7 +314,7 @@ export const importDatas = async ({
         });
 
         sheetAPI.logBatchProtectedRange();
-        sheetAPI.runBatchProtectedRange(collabId); // volontary missing await here
+        await sheetAPI.runBatchProtectedRange(collabId); // volontary missing await here
       }
     }
     importDatasRunning = false;

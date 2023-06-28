@@ -159,7 +159,7 @@ const handleWriteTryCatch = async <T>(
 
   try {
     timeout = setTimeout(() => {
-      console.log("[READ] MAX_AWAITING_TIME reached 💀");
+      console.log("[WRITE] MAX_AWAITING_TIME reached 💀");
       throw new MaxAwaitingTimeError();
     }, MAX_AWAITING_TIME);
 
