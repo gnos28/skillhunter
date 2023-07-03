@@ -5,6 +5,7 @@ import { importSheetData } from "./appSheet/importSheetData";
 import { updateSheetRange } from "./appSheet/updateSheetRange";
 import { clearTabData } from "./appSheet/clearSheetRows";
 import { TabListItem } from "../interfaces";
+import { resetCollab } from "../services/resetCollabService";
 
 type TabCache = {
   [key: string]: ({
@@ -152,14 +153,16 @@ const handleReadDelay = async <T>(
 const handleWriteTryCatch = async <T>(
   callback: () => Promise<T>,
   writeCatchCount: number,
-  delayMultiplier?: number
+  delayMultiplier?: number,
+  sheetId?: string
 ) => {
   let res: T | undefined = undefined;
   let timeout: NodeJS.Timeout | undefined = undefined;
 
   try {
-    timeout = setTimeout(() => {
+    timeout = setTimeout(async () => {
       console.log("[WRITE] MAX_AWAITING_TIME reached 💀");
+      if (sheetId !== undefined) await resetCollab(sheetId);
       throw new MaxAwaitingTimeError();
     }, MAX_AWAITING_TIME);
 
@@ -187,7 +190,8 @@ const handleWriteTryCatch = async <T>(
       res = await handleWriteDelay(
         callback,
         writeCatchCount,
-        CATCH_DELAY_MULTIPLIER
+        CATCH_DELAY_MULTIPLIER,
+        sheetId
       );
   } finally {
     writeCatchCount = 0;
@@ -198,7 +202,8 @@ const handleWriteTryCatch = async <T>(
 const handleWriteDelay = async <T>(
   callback: () => Promise<T>,
   writeCatchCount: number = 0,
-  delayMultiplier?: number
+  delayMultiplier?: number,
+  sheetId?: string
 ) => {
   const currentTime = new Date().getTime();
   nbInQueueWrite += delayMultiplier || 1;
@@ -226,7 +231,8 @@ const handleWriteDelay = async <T>(
   const res: T = await handleWriteTryCatch(
     callback,
     writeCatchCount,
-    delayMultiplier
+    delayMultiplier,
+    sheetId
   );
 
   return res;
@@ -377,9 +383,14 @@ export const sheetAPI = {
   runBatchProtectedRange: async (spreadsheetId: string) => {
     console.log("*** sheetAPI.runBatchProtectedRange");
 
-    await handleWriteDelay(async () => {
-      await batchUpdate.runProtectedRange(spreadsheetId);
-    });
+    await handleWriteDelay(
+      async () => {
+        await batchUpdate.runProtectedRange(spreadsheetId);
+      },
+      0,
+      1,
+      spreadsheetId
+    );
   },
 
   clearTabData: async ({
