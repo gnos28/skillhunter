@@ -66,7 +66,7 @@ const CATCH_DELAY_MULTIPLIER = 15;
 const MAX_CATCH_COUNT = 30;
 const MAX_AWAITING_TIME = 120_000;
 
-class MaxAwaitingTimeError extends Error {}
+export class MaxAwaitingTimeError extends Error {}
 
 const handleReadTryCatch = async <T>(
   callback: () => Promise<T>,

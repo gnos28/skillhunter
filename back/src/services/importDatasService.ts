@@ -21,9 +21,10 @@ import {
 } from "../interfaces/const";
 import { appDrive } from "../utils/google";
 import { mapTrimObj } from "../utils/mapTrimObj";
-import { sheetAPI } from "../utils/sheetAPI";
+import { MaxAwaitingTimeError, sheetAPI } from "../utils/sheetAPI";
 import { exportProgression } from "./exportProgression";
 import { lockContrat } from "./lockContratService";
+import { resetCollab } from "./resetCollabService";
 
 type ImportDatasProps = {
   emailAlert: boolean;
@@ -33,6 +34,7 @@ type ImportDatasProps = {
 };
 
 let importDatasRunning = false;
+let collabId: string = "";
 
 export const importDatas = async ({
   emailAlert = true,
@@ -113,7 +115,11 @@ export const importDatas = async ({
     for await (const collabLine of collabData) {
       const collabName = collabLine[TAB_COLLAB_COL_COLLAB];
       const collabEmail = collabLine[TAB_COLLAB_COL_EMAIL];
-      let collabId = collabLine[TAB_COLLAB_COL_SHEET_ID];
+      collabId = collabLine[TAB_COLLAB_COL_SHEET_ID];
+
+      if (collabId === "1MFlfW2bL4-NawH16ifnFEcw6S107WUC1wLgxrQJX6A8")
+        throw new MaxAwaitingTimeError();
+
       let nbContratsFound = 0;
 
       if (collabName && collabEmail) {
@@ -320,6 +326,10 @@ export const importDatas = async ({
     importDatasRunning = false;
     console.log("****** END OF importDatas FUNCTION ******");
   } catch (error: any) {
+    if (error instanceof MaxAwaitingTimeError) {
+      console.log("collabId", collabId);
+      await resetCollab(collabId);
+    }
     console.error(error.message);
     importDatasRunning = false;
   }

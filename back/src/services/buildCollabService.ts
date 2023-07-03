@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 import { appDrive } from "../utils/google";
-import { sheetAPI } from "../utils/sheetAPI";
+import { MaxAwaitingTimeError, sheetAPI } from "../utils/sheetAPI";
 import {
   TAB_COLLAB_COL_COLLAB,
   TAB_COLLAB_COL_EMAIL,
@@ -13,6 +13,7 @@ import { importDatas } from "./importDatasService";
 import { updateWholeDatas } from "./updateWholeDatasService";
 import { getBodyFromFs } from "./getBodyFromFs";
 import { exportProgression } from "./exportProgression";
+import { resetCollab } from "./resetCollabService";
 
 const encodeBase64 = (data: string) => {
   return Buffer.from(data).toString("base64");
@@ -25,6 +26,7 @@ type BuildCollabProps = {
 };
 
 let buildCollabRunning = false;
+let collabId = "";
 
 export const buildCollab = async ({
   mainSpreadsheetId: argMainSpreadsheetId,
@@ -104,7 +106,7 @@ export const buildCollab = async ({
     for await (const line of collabData) {
       const collabName = line[TAB_COLLAB_COL_COLLAB];
       const collabEmail = line[TAB_COLLAB_COL_EMAIL];
-      let collabId = line[TAB_COLLAB_COL_SHEET_ID];
+      collabId = line[TAB_COLLAB_COL_SHEET_ID];
 
       if (collabName && collabEmail) {
         let sheetFound = false;
@@ -180,6 +182,10 @@ export const buildCollab = async ({
     buildCollabRunning = false;
     return collabData;
   } catch (error: any) {
+    if (error instanceof MaxAwaitingTimeError) {
+      console.log("collabId", collabId);
+      await resetCollab(collabId);
+    }
     console.error(error.message);
     buildCollabRunning = false;
   }
