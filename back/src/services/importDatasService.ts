@@ -117,9 +117,6 @@ export const importDatas = async ({
       const collabEmail = collabLine[TAB_COLLAB_COL_EMAIL];
       collabId = collabLine[TAB_COLLAB_COL_SHEET_ID];
 
-      if (collabId === "1MFlfW2bL4-NawH16ifnFEcw6S107WUC1wLgxrQJX6A8")
-        throw new MaxAwaitingTimeError();
-
       let nbContratsFound = 0;
 
       if (collabName && collabEmail) {
@@ -326,6 +323,11 @@ export const importDatas = async ({
     importDatasRunning = false;
     console.log("****** END OF importDatas FUNCTION ******");
   } catch (error: any) {
+    console.log(
+      "catch inside importDatas",
+      error instanceof MaxAwaitingTimeError
+    );
+
     if (error instanceof MaxAwaitingTimeError) {
       console.log("collabId", collabId);
       await resetCollab(collabId);

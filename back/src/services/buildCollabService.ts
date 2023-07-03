@@ -182,6 +182,10 @@ export const buildCollab = async ({
     buildCollabRunning = false;
     return collabData;
   } catch (error: any) {
+    console.log(
+      "catch inside buildCollab",
+      error instanceof MaxAwaitingTimeError
+    );
     if (error instanceof MaxAwaitingTimeError) {
       console.log("collabId", collabId);
       await resetCollab(collabId);

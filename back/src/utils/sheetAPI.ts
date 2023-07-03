@@ -178,8 +178,10 @@ const handleWriteTryCatch = async <T>(
     lastWriteRequestTime = new Date().getTime();
     nbInQueueWrite -= delayMultiplier || 1;
     clearTimeout(timeout);
-    if (e instanceof MaxAwaitingTimeError && writeCatchCount > 1)
+    if (e instanceof MaxAwaitingTimeError && writeCatchCount > 1) {
       writeCatchCount = MAX_CATCH_COUNT;
+      throw new MaxAwaitingTimeError();
+    }
 
     if (writeCatchCount < MAX_CATCH_COUNT)
       res = await handleWriteDelay(
